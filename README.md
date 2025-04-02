@@ -120,4 +120,3 @@ To create a **seamless, interactive, and AI-driven** platform where users can **
 ---
 
 🔗 **Stay tuned for the launch of Skillfinix!**
-
