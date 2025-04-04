@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom'; 
 import Sidebar from './components/Sidebar/Sidebar.jsx';
+import HomePage from './components/HomePage/LandingPage.jsx';
 import SkillBartersPage from './components/SkillBarters/SkillBartersPage.jsx';
 import './index.css'; 
 
@@ -13,7 +14,7 @@ const App = () => {
       if (window.innerWidth < 768) {
         setSidebarCollapsed(true);
       } else {
-        setSidebarCollapsed(false); // Reset to false on larger screens
+        setSidebarCollapsed(false);
       }
     };
     
@@ -29,26 +30,51 @@ const App = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Empty div for sidebar space reservation */}
+      <div className={`flex-shrink-0 ${
+        sidebarCollapsed ? 'w-[72px]' : 'w-[260px]'
+      } transition-all duration-300`}></div>
+      
+      {/* Sidebar component - positioned absolutely */}
       <Sidebar onToggle={handleSidebarToggle} />
-      <div 
-        className={`flex-1 transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-[72px]' : 'ml-[240px]'
-        } p-6 relative`}
-      >
-        {/* Dimming overlay */}
-        {!sidebarCollapsed && (
-          <div className="fixed inset-0 bg-black opacity-50 z-40" />
-        )}
+      
+      {/* Main content area - full width with no margin */}
+      <main className="flex-1 overflow-auto h-full">
         <Routes>
-          <Route path="/" element={<div className="bg-white rounded-lg shadow-sm p-6"><h1 className="text-3xl font-bold text-indigo-700 mb-4">Skillfinix</h1><div>Home Dashboard Content</div></div>} />
-          <Route path="/explore" element={<div className="bg-white rounded-lg shadow-sm p-6"><h1 className="text-3xl font-bold text-indigo-700 mb-4">Explore</h1><div>Explore Skills Content</div></div>} />
-          <Route path="/trending" element={<div className="bg-white rounded-lg shadow-sm p-6"><h1 className="text-3xl font-bold text-indigo-700 mb-4">Trending</h1><div>Trending Skills Content</div></div>} />
-          <Route path="/barters" element={<div className="bg-white rounded-lg shadow-sm"><SkillBartersPage /></div>} />
-          <Route path="/user/:userId" element={<div className="bg-white rounded-lg shadow-sm p-6"><h1 className="text-3xl font-bold text-indigo-700 mb-4">User  Profile</h1><div>User Profile Content</div></div>} />
-          {/* Add more routes as needed */}
+          {/* Home route */}
+          <Route path="/" element={<HomePage />} />
+          
+          {/* Skill Barters route */}
+          <Route path="/barters" element={<SkillBartersPage />} />
+          
+          {/* Explore route */}
+          <Route path="/explore" element={
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-4">Explore</h1>
+              <p>Explore Skills Content</p>
+            </div>
+          } />
+          
+          {/* Trending route */}
+          <Route path="/trending" element={
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-4">Trending</h1>
+              <p>Trending Skills Content</p>
+            </div>
+          } />
+          
+          {/* User Profile route */}
+          <Route path="/profile" element={
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-4">User Profile</h1>
+              <p>User Profile Content</p>
+            </div>
+          } />
+          
+          {/* Add other routes here */}
         </Routes>
-      </div>
+      </main>
     </div>
   );
 };
