@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { recentCourses } from "./NavData";
+import { recentCourses } from "../core/NavData";
 
 const RecentCoursesSection = () => {
   return (

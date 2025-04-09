@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { footerLinks } from "./NavData";
+import { footerLinks } from "./core/NavData";
 
 const FooterLinks = () => {
   return (

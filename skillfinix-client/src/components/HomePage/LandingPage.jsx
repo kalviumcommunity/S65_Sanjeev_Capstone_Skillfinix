@@ -114,7 +114,7 @@ const LandingPage = ({ darkMode = false, sidebarCollapsed = true }) => {
       {/* Fixed Header - remains at the top */}
       <Header darkMode={darkMode} sidebarCollapsed={sidebarCollapsed} />
       {/* Scrollable Main Content - positioned below the header */}
-      // In LandingPage.jsx
+
       <main className={`flex-1 overflow-y-auto mt-14 sm:mt-16 p-4 sm:p-6 pb-11 w-full transition-all duration-300 ${darkMode ? 'bg-gray-900/5' : ''}`}>
         <div className="w-full mx-auto">
           {/* Welcome Banner Section */}

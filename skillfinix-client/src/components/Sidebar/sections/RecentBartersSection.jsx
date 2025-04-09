@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Users } from "react-feather";
-import { recentBarters } from "./NavData";
+import { recentBarters } from "../core/NavData";
 
 const RecentBartersSection = () => {
   return (

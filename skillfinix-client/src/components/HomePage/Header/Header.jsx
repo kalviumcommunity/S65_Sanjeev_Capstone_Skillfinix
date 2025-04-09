@@ -148,7 +148,7 @@ const Header = ({ darkMode = false, sidebarCollapsed = true }) => {
   const showCreateText = !isSmallView && window.innerWidth > (sidebarCollapsed ? 900 : 1000);
 
   return (
-    <header className={`${darkMode ? 'bg-gray-100/95' : 'bg-white'} shadow-sm fixed top-0 right-0 z-50 flex items-center px-2 sm:px-4 transition-colors duration-300 h-14 sm:h-16 overflow-visible`}
+    <header className={`${darkMode ? 'bg-gray-100/95' : 'bg-white'} shadow-sm fixed top-0 right-0 z-40 flex items-center px-2 sm:px-4 transition-colors duration-300 h-14 sm:h-16 overflow-visible`}
       style={{
         left: sidebarCollapsed ? '72px' : '260px',
         transition: 'left 0.3s ease-in-out'

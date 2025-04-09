@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { navItems, getNavLinkClass } from "./NavData";
+import { navItems, getNavLinkClass } from "../core/NavData";
 
 const AdminSection = () => {
   return (

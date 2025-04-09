@@ -1,14 +1,13 @@
-// components/Sidebar/Sidebar.jsx
-import { useState, useEffect } from "react";
 import SidebarHeader from "./SidebarHeader";
 import PrimaryNav from "./PrimaryNav";
-import UserSection from "./UserSection";
-import DiscoverSection from "./DiscoverSection";
-import RecentCoursesSection from "./RecentCoursesSection";
-import RecentBartersSection from "./RecentBartersSection";
-import AdminSection from "./AdminSection";
-import QuickActionsSection from "./QuickActionsSection";
-import FooterLinks from "./FooterLinks";
+import React, { useState, useEffect} from "react";
+import UserSection from "../sections/UserSection";
+import AdminSection from "../sections/AdminSection";
+import DiscoverSection from "../sections/DiscoverSection";
+import QuickActionsSection from "../sections/QuickActionsSection";
+import RecentCoursesSection from "../sections/RecentCoursesSection";
+import RecentBartersSection from "../sections/RecentBartersSection";
+import FooterLinks from "../FooterLinks";
 
 const Sidebar = ({ onToggle, collapsed: propCollapsed }) => {
   const [collapsed, setCollapsed] = useState(propCollapsed ?? false);

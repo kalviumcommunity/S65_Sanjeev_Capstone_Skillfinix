@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { User, ChevronRight } from "react-feather";
-import { navItems, getNavLinkClass } from "./NavData";
+import { navItems, getNavLinkClass } from "../core/NavData";
 
 const UserSection = ({ collapsed }) => {
   return collapsed ? (

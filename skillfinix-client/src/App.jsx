@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom'; 
-import Sidebar from './components/Sidebar/Sidebar';
+import Sidebar from './components/Sidebar/core/Sidebar';
 import LandingPage from './components/HomePage/LandingPage';
 import SkillBartersSection from './components/SkillBarters/SkillBartersSection';
 import Header from './components/HomePage/Header/Header';
