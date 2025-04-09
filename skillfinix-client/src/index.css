@@ -1,8 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
 
 :root {
   --sidebar-font: 14px;
@@ -17,15 +18,86 @@ body {
 }
 
 /* Custom sidebar styling */
+
+/* Initial state - scrollbar invisible */
 .thin-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 12px;
+  background: transparent;
 }
 
 .thin-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/* Hide thumb by default */
 .thin-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: transparent;
   border-radius: 20px;
+  transition: background-color 0.3s ease; /* Smooth fade effect */
 }
+
+/* Show thumb on hover */
+.thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(136, 136, 136, 1);
+}
+
+/* Hide arrows by default (correct method) */
+.thin-scrollbar::-webkit-scrollbar-button {
+  height: 0;
+  width: 0;
+  display: none;
+}
+
+/* Show arrows on hover (if needed) */
+.thin-scrollbar:hover::-webkit-scrollbar-button {
+  height: 16px;
+  width: 12px;
+  display: block;
+  background-color: rgba(136, 136, 136, 1);
+}
+
+/* Firefox support */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.thin-scrollbar:hover {
+  scrollbar-color: rgba(136, 136, 136, 1) transparent;
+}
+
+
+
+
+
+@media (min-width: 475px) {
+  .xs\:block {
+    display: block;
+  }
+  
+  .xs\:flex {
+    display: flex;
+  }
+  
+  .xs\:hidden {
+    display: none;
+  }
+  
+  .xs\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Additional responsive utils as needed */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+
+
+
+
