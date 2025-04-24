@@ -219,7 +219,6 @@ export const ChatInput = ({ onSendMessage, onOpenFileUpload }) => {
             />
           </Box>
 
-          {/* Input Field with boxy WhatsApp-like styling - PRESERVING ORIGINAL STYLE */}
           <Box
             flex="1"
             bg={inputBgColor}
@@ -231,19 +230,6 @@ export const ChatInput = ({ onSendMessage, onOpenFileUpload }) => {
             py={1}
             boxShadow="sm"
           >
-            {/* Emoji icon button that toggles the emoji picker */}
-            <IconButton
-              icon={<FaSmile />}
-              aria-label="Emoji"
-              size="sm"
-              variant="ghost"
-              color={isEmojiPickerOpen ? "#00A884" : iconColor}
-              mr={2}
-              minW="auto"
-              h="auto"
-              onClick={toggleEmojiPicker}
-            />
-
             <Input
               placeholder="Type a message"
               value={message}
