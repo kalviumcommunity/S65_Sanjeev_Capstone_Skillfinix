@@ -1,5 +1,4 @@
-import chatContext from "../../context/chatContext";
-import { useState, useContext } from "react";
+import { useState } from "react";
 import {
   Flex,
   Heading,
@@ -8,110 +7,93 @@ import {
   InputGroup,
   Stack,
   InputLeftElement,
+  chakra,
   Box,
   Link,
   Avatar,
   FormControl,
+  FormHelperText,
   InputRightElement,
   Card,
   CardBody,
   useToast,
+  Spinner,
+  Tooltip,
 } from "@chakra-ui/react";
-import { LockIcon } from "@chakra-ui/icons";
+import { FaLock } from "react-icons/fa";
+import { ArrowBackIcon } from "@chakra-ui/icons";
 
-const Signup = (props) => {
-  const context = useContext(chatContext);
-  const {hostName} = context
+const CFaLock = chakra(FaLock);
+
+const Login = (props) => {
   const toast = useToast();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const handleTabs = props.handleTabsChange;
   const [showPassword, setShowPassword] = useState(false);
-
-  const [name, setname] = useState("");
-  const [email, setemail] = useState("");
-  const [password, setpassword] = useState("");
-  const [confirmpassword, setconfirmpassword] = useState("");
-
-  const handletabs = props.handleTabsChange;
-
-  function showtoast(description) {
-    toast({
-      title: "An error occurred.",
-      description: description,
-      status: "error",
-      duration: 5000,
-      isClosable: true,
-    });
-  }
+  const [forgotPasswordShow, setForgotPasswordShow] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleShowClick = () => setShowPassword(!showPassword);
 
-  const handleSignup = async (e) => {
+  const showToast = (title, description, status) => {
+    toast({
+      title: title,
+      description: description,
+      status: status,
+      duration: 5000,
+      isClosable: true,
+    });
+  };
+
+  const handleLogin = async function (e) {
     e.preventDefault();
-
-    if (email === "" || name === "" || password === "") {
-      showtoast("All fields are required");
+  
+    if (!email) {
+      showToast("Error", "Email is required", "error");
       return;
-    } else if (name.length > 20 || name.length < 3) {
-      showtoast("Name should be atlest 3 and atmost 20 characters long");
-      return;
-    } else if (!email.includes("@") || !email.includes(".")) {
-      showtoast("Invalid email");
-      return;
-    } else if (email.length > 50) {
-      showtoast("Email should be atmost 50 characters long");
-      return;
-    } else if (password.length < 8 || password.length > 20) {
-      showtoast("Invalid Password");
-      return;
-    } else if (password !== confirmpassword) {
-      showtoast("Passwords do not match");
-      return;
-    } else {
-      const payload = {
-        email,
-        name,
-        password,
-      };
-
-      toast.promise(
-        fetch(`${hostName}/auth/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        })
-          .then((response) => {
-            if (response.status !== 200) {
-              response.json().then((resdata) => {});
-              throw new Error("Failed to fetch data");
-            } else {
-              response.json().then((resdata) => {
-                localStorage.setItem("token", resdata.authtoken);
-                handletabs(0);
-              });
-            }
-          })
-          .catch((error) => {}),
-        {
-          loading: { title: "Creating account...", description: "please wait" },
-          success: {
-            title: "Account created.",
-            description: "We have created your account for you.",
-          },
-          error: {
-            title: "An error occurred.",
-            description: "We were unable to create your account.",
-          },
-        }
-      );
     }
+  
+    if (!password && !otp) {
+      showToast("Error", "Password or OTP is required", "error");
+      return;
+    }
+
+    try {
+      setIsLoggingIn(true);
+      
+      setTimeout(() => {
+        showToast("Login successful", "You are now logged in", "success");
+        
+        console.log("Navigating to dashboard");
+        
+        setIsLoggingIn(false);
+      }, 1500);
+      
+    } catch (error) {
+      showToast("Error", "Login failed", "error");
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleSendOtp = (e) => {
+    e.preventDefault();
+    setSending(true);
+
+    // Simulate OTP sending
+    setTimeout(() => {
+      showToast("OTP sent", "OTP sent to your email", "success");
+      setSending(false);
+    }, 1500);
   };
 
   return (
     <Flex
       flexDirection="column"
-      width="100%"
+      width="100wh"
       height="70vh"
       justifyContent="center"
       alignItems="center"
@@ -124,108 +106,113 @@ const Signup = (props) => {
         alignItems="center"
       >
         <Avatar bg="purple.300" />
-        <Heading color="pruple.400">Welcome</Heading>
+        <Heading color="purple.400">Welcome Back</Heading>
         <Card minW={{ base: "90%", md: "468px" }} borderRadius={15} shadow={0}>
           <CardBody p={0}>
             <form>
               <Stack spacing={4}>
-                <FormControl>
+                {forgotPasswordShow && (
+                  <Tooltip label="login" aria-label="A tooltip">
+                    <Button
+                      w={"fit-content"}
+                      onClick={() => setForgotPasswordShow(false)}
+                    >
+                      <ArrowBackIcon />
+                    </Button>
+                  </Tooltip>
+                )}
+                <FormControl display={"flex"}>
                   <InputGroup
                     borderEndRadius={"10px"}
                     borderStartRadius={"10px"}
                     size={"lg"}
                   >
                     <Input
-                      type="text"
-                      placeholder="Enter your name"
-                      focusBorderColor="purple.500"
-                      onChange={(e) => setname(e.target.value)}
-                      required
-                    />
-                  </InputGroup>
-                </FormControl>
-
-                <FormControl>
-                  <InputGroup
-                    borderEndRadius={"10px"}
-                    borderStartRadius={"10px"}
-                    size={"lg"}
-                  >
-                    <Input
+                      id="login-email"
                       type="email"
                       placeholder="Email address"
                       focusBorderColor="purple.500"
-                      onChange={(e) => setemail(e.target.value)}
+                      onChange={(e) => setEmail(e.target.value)}
+                      value={email}
                     />
                   </InputGroup>
+                  {forgotPasswordShow && (
+                    <Button
+                      m={1}
+                      fontSize={"sm"}
+                      onClick={(e) => handleSendOtp(e)}
+                      isDisabled={sending}
+                    >
+                      {sending ? <Spinner size="sm" /> : "Send OTP"}
+                    </Button>
+                  )}
                 </FormControl>
 
-                <FormControl>
-                  <InputGroup
-                    borderEndRadius={"10px"}
-                    borderStartRadius={"10px"}
-                    size={"lg"}
-                  >
-                    <InputLeftElement
-                      pointerEvents="none"
-                      color="gray.300"
-                      children={<LockIcon color="gray.300" />}
-                    />
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Password"
-                      focusBorderColor="purple.500"
-                      onChange={(e) => setpassword(e.target.value)}
-                    />
-                    <InputRightElement mx={1}>
-                      <Button
-                        fontSize={"x-small"}
-                        size={"xs"}
-                        onClick={handleShowClick}
-                      >
-                        {showPassword ? "Hide" : "Show"}
-                      </Button>
-                    </InputRightElement>
-                  </InputGroup>
-
-                  <InputGroup
-                    borderEndRadius={"10px"}
-                    borderStartRadius={"10px"}
-                    size={"lg"}
-                    my={4}
-                  >
-                    <InputLeftElement
-                      pointerEvents="none"
-                      color="gray.300"
-                      children={<LockIcon color="gray.300" />}
-                    />
-                    <Input
-                      textOverflow={"ellipsis"}
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Confirm Password"
-                      focusBorderColor="purple.500"
-                      onChange={(e) => setconfirmpassword(e.target.value)}
-                    />
-                    <InputRightElement mx={1}>
-                      <Button
-                        fontSize={"x-small"}
-                        size={"xs"}
-                        onClick={handleShowClick}
-                      >
-                        {showPassword ? "Hide" : "Show"}
-                      </Button>
-                    </InputRightElement>
-                  </InputGroup>
-                </FormControl>
+                {!forgotPasswordShow && (
+                  <FormControl>
+                    <InputGroup
+                      borderEndRadius={"10px"}
+                      borderStartRadius={"10px"}
+                      size={"lg"}
+                    >
+                      <InputLeftElement
+                        pointerEvents="none"
+                        color="gray.300"
+                        children={<CFaLock color="gray.300" />}
+                      />
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        focusBorderColor="purple.500"
+                        onChange={(e) => setPassword(e.target.value)}
+                        value={password}
+                      />
+                      <InputRightElement mx={1}>
+                        <Button
+                          fontSize={"x-small"}
+                          size={"xs"}
+                          onClick={handleShowClick}
+                        >
+                          {showPassword ? "Hide" : "Show"}
+                        </Button>
+                      </InputRightElement>
+                    </InputGroup>
+                    <FormHelperText textAlign="right">
+                      <Link onClick={() => setForgotPasswordShow(true)}>
+                        Forgot password?
+                      </Link>
+                    </FormHelperText>
+                  </FormControl>
+                )}
+                {forgotPasswordShow && (
+                  <FormControl>
+                    <InputGroup
+                      borderEndRadius={"10px"}
+                      borderStartRadius={"10px"}
+                      size={"lg"}
+                    >
+                      <Input
+                        id={"otp"}
+                        type="number"
+                        placeholder="Enter OTP"
+                        focusBorderColor="purple.500"
+                        onChange={(e) => setOtp(e.target.value)}
+                        value={otp}
+                      />
+                    </InputGroup>
+                  </FormControl>
+                )}
                 <Button
                   borderRadius={10}
                   type="submit"
                   variant="solid"
                   colorScheme="purple"
                   width="full"
-                  onClick={handleSignup}
+                  onClick={handleLogin}
+                  isLoading={isLoggingIn}
+                  loadingText="Logging in"
                 >
-                  Signup
+                  {forgotPasswordShow ? "Login using OTP" : "Login"}
                 </Button>
               </Stack>
             </form>
@@ -233,13 +220,13 @@ const Signup = (props) => {
         </Card>
       </Stack>
       <Box>
-        Already have account?{" "}
-        <Link color="purple.500" onClick={() => handletabs(0)}>
-          login
+        New to us?{" "}
+        <Link color="purple.500" onClick={() => handleTabs(1)}>
+          Sign Up
         </Link>
       </Box>
     </Flex>
   );
 };
 
-export default Signup;
+export default Login;
