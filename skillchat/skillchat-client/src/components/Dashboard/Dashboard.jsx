@@ -375,28 +375,6 @@ const Dashboard = () => {
                   </Text>
                 </Box>
               )}
-              
-              {/* Chat List */}
-              <Box flex={1} overflowY="auto" bg={containerBgColor}>
-                <Chats
-                  searchQuery={searchQuery}
-                  activeTab={chatSectionTab}
-                  setActiveTab={setChatSectionTab}
-                />
-              </Box>
-            </Box>
-
-            {/* Chat Area */}
-            <Box
-              h={"inherit"}
-              w={{
-                base: "100%",
-                md: "70%",
-              }}
-              minW={"min-content"}
-              bg={containerBgColor}
-            >
-              <ChatArea />
             </Box>
           </Flex>
         </Box>
