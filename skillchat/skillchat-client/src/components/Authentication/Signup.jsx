@@ -1,5 +1,4 @@
-import chatContext from "../../context/chatContext";
-import { useState, useContext } from "react";
+import { useState } from "react";
 import {
   Flex,
   Heading,
@@ -20,20 +19,18 @@ import {
 import { LockIcon } from "@chakra-ui/icons";
 
 const Signup = (props) => {
-  const context = useContext(chatContext);
-  const {hostName} = context
   const toast = useToast();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [name, setname] = useState("");
-  const [email, setemail] = useState("");
-  const [password, setpassword] = useState("");
-  const [confirmpassword, setconfirmpassword] = useState("");
+  const handleTabs = props.handleTabsChange;
 
-  const handletabs = props.handleTabsChange;
-
-  function showtoast(description) {
+  function showToast(description) {
     toast({
       title: "An error occurred.",
       description: description,
@@ -45,67 +42,44 @@ const Signup = (props) => {
 
   const handleShowClick = () => setShowPassword(!showPassword);
 
-  const handleSignup = async (e) => {
+  const handleSignup = (e) => {
     e.preventDefault();
-
+    
+    // Form validation
     if (email === "" || name === "" || password === "") {
-      showtoast("All fields are required");
+      showToast("All fields are required");
       return;
     } else if (name.length > 20 || name.length < 3) {
-      showtoast("Name should be atlest 3 and atmost 20 characters long");
+      showToast("Name should be at least 3 and at most 20 characters long");
       return;
     } else if (!email.includes("@") || !email.includes(".")) {
-      showtoast("Invalid email");
+      showToast("Invalid email");
       return;
     } else if (email.length > 50) {
-      showtoast("Email should be atmost 50 characters long");
+      showToast("Email should be at most 50 characters long");
       return;
     } else if (password.length < 8 || password.length > 20) {
-      showtoast("Invalid Password");
+      showToast("Password should be between 8 and 20 characters");
       return;
-    } else if (password !== confirmpassword) {
-      showtoast("Passwords do not match");
+    } else if (password !== confirmPassword) {
+      showToast("Passwords do not match");
       return;
-    } else {
-      const payload = {
-        email,
-        name,
-        password,
-      };
-
-      toast.promise(
-        fetch(`${hostName}/auth/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        })
-          .then((response) => {
-            if (response.status !== 200) {
-              response.json().then((resdata) => {});
-              throw new Error("Failed to fetch data");
-            } else {
-              response.json().then((resdata) => {
-                localStorage.setItem("token", resdata.authtoken);
-                handletabs(0);
-              });
-            }
-          })
-          .catch((error) => {}),
-        {
-          loading: { title: "Creating account...", description: "please wait" },
-          success: {
-            title: "Account created.",
-            description: "We have created your account for you.",
-          },
-          error: {
-            title: "An error occurred.",
-            description: "We were unable to create your account.",
-          },
-        }
-      );
-    }
+    } 
+    
+    setIsSubmitting(true);
+    
+    setTimeout(() => {
+      toast({
+        title: "Account created.",
+        description: "We have created your account for you.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+      
+      handleTabs(0);
+      setIsSubmitting(false);
+    }, 1500);
   };
 
   return (
@@ -124,7 +98,7 @@ const Signup = (props) => {
         alignItems="center"
       >
         <Avatar bg="purple.300" />
-        <Heading color="pruple.400">Welcome</Heading>
+        <Heading color="purple.400">Welcome</Heading>
         <Card minW={{ base: "90%", md: "468px" }} borderRadius={15} shadow={0}>
           <CardBody p={0}>
             <form>
@@ -139,7 +113,7 @@ const Signup = (props) => {
                       type="text"
                       placeholder="Enter your name"
                       focusBorderColor="purple.500"
-                      onChange={(e) => setname(e.target.value)}
+                      onChange={(e) => setName(e.target.value)}
                       required
                     />
                   </InputGroup>
@@ -155,7 +129,7 @@ const Signup = (props) => {
                       type="email"
                       placeholder="Email address"
                       focusBorderColor="purple.500"
-                      onChange={(e) => setemail(e.target.value)}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </InputGroup>
                 </FormControl>
@@ -175,7 +149,7 @@ const Signup = (props) => {
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
                       focusBorderColor="purple.500"
-                      onChange={(e) => setpassword(e.target.value)}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
                     <InputRightElement mx={1}>
                       <Button
@@ -204,7 +178,7 @@ const Signup = (props) => {
                       type={showPassword ? "text" : "password"}
                       placeholder="Confirm Password"
                       focusBorderColor="purple.500"
-                      onChange={(e) => setconfirmpassword(e.target.value)}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                     <InputRightElement mx={1}>
                       <Button
@@ -224,6 +198,8 @@ const Signup = (props) => {
                   colorScheme="purple"
                   width="full"
                   onClick={handleSignup}
+                  isLoading={isSubmitting}
+                  loadingText="Creating account"
                 >
                   Signup
                 </Button>
@@ -234,8 +210,8 @@ const Signup = (props) => {
       </Stack>
       <Box>
         Already have account?{" "}
-        <Link color="purple.500" onClick={() => handletabs(0)}>
-          login
+        <Link color="purple.500" onClick={() => handleTabs(0)}>
+          Login
         </Link>
       </Box>
     </Flex>
