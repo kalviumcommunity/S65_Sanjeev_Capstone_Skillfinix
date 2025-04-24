@@ -1,30 +1,41 @@
-// App.js
-import "./App.css";
-import { useColorMode, ChakraProvider } from "@chakra-ui/react";
-import Navbar from "./components/Navbar/Navbar";
-import ChatState from "./context/appState";
-import { useContext } from "react";
-import chatContext from "./context/chatContext";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Box, Tabs, TabList, TabPanels, Tab, TabPanel, Container } from "@chakra-ui/react";
+import Login from "./components/Authentication/Login";
+import Signup from "./components/Authentication/Signup";
 
-function App(props) {
-  const { toggleColorMode } = useColorMode();
-  const context = useContext(chatContext);
-  const location = useLocation();
-  
-  // Hide navbar on these routes
-  const hideNavbarRoutes = ["/", "/login", "/signup"];
-  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
+const App = () => {
+  const [tabIndex, setTabIndex] = useState(0);
+
+  const handleTabsChange = (index) => {
+    setTabIndex(index);
+  };
 
   return (
-    <ChakraProvider>
-      <ChatState>
-        <div className="App">
-          {shouldShowNavbar && <Navbar toggleColorMode={toggleColorMode} context={context} />}
-        </div>
-      </ChatState>
-    </ChakraProvider>
+    <Container maxW="container.md" centerContent py={8}>
+      <Box 
+        w="full" 
+        p={4} 
+        borderRadius="lg" 
+        boxShadow="md" 
+        bg="white"
+      >
+        <Tabs isFitted variant="soft-rounded" colorScheme="purple" index={tabIndex} onChange={handleTabsChange}>
+          <TabList mb="1em">
+            <Tab>Login</Tab>
+            <Tab>Sign Up</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel>
+              <Login handleTabsChange={handleTabsChange} />
+            </TabPanel>
+            <TabPanel>
+              <Signup handleTabsChange={handleTabsChange} />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Box>
+    </Container>
   );
-}
+};
 
 export default App;

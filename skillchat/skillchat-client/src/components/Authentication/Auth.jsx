@@ -1,6 +1,6 @@
 import { Tabs, TabList, TabPanels, Tab, TabPanel } from "@chakra-ui/react";
-import Login from "./Login";
-import Signup from "./Signup";
+import Login from "./Login.jsx";
+import Signup from "./Signup.jsx";
 import React from "react";
 
 const Auth = (props) => {
