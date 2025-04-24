@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
 const connectDB = require("./db.js");
+const { initSocket } = require("./sockets/socket");
 
 dotenv.config();
 
@@ -23,6 +24,9 @@ app.get("/", (req, res) => {
 });
 
 const server = http.createServer(app);
+
+initSocket(server);
+
 server.listen(PORT, () => {
   console.log(`Server started at http://localhost:${PORT}`);
 });
