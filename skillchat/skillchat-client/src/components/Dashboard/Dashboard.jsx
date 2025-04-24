@@ -25,6 +25,8 @@ import { useNavigate } from "react-router-dom";
 import chatContext from "../../context/chatContext";
 import { AddIcon, SearchIcon, SettingsIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import { FaEllipsisV, FaUsers, FaArchive, FaLock, FaBold } from "react-icons/fa";
+import Chats from "./Chats";
+import { ChatArea } from "./ChatArea";
 
 const Dashboard = () => {
   const context = useContext(chatContext);
@@ -375,6 +377,28 @@ const Dashboard = () => {
                   </Text>
                 </Box>
               )}
+              
+              {/* Chat List */}
+              <Box flex={1} overflowY="auto" bg={containerBgColor}>
+                <Chats
+                  searchQuery={searchQuery}
+                  activeTab={chatSectionTab}
+                  setActiveTab={setChatSectionTab}
+                />
+              </Box>
+            </Box>
+
+            {/* Chat Area */}
+            <Box
+              h={"inherit"}
+              w={{
+                base: "100%",
+                md: "70%",
+              }}
+              minW={"min-content"}
+              bg={containerBgColor}
+            >
+              <ChatArea />
             </Box>
           </Flex>
         </Box>
