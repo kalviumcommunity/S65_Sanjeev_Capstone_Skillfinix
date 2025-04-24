@@ -20,6 +20,7 @@ const connectDB = async () => {
     console.error(`MongoDB connection error: ${error.message}`);
     console.log("🔁 Retrying connection in 5 seconds...");
     setTimeout(connectDB, 5000);
+    
   }
 };
 

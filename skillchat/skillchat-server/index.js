@@ -14,7 +14,9 @@ app.use(express.json());
 
 connectDB().catch(err => console.error("Database connection error:", err));
 
-app.use("/api/user", require("./Routes/userRoute.js"));
+app.use("/user", require("./Routes/userRoutes.js"));
+app.use("/message", require("./Routes/message_routes.js"));
+app.use("/conversation", require("./Routes/conversation_routes.js"));
 
 app.get("/", (req, res) => {
   res.send("Hello World from SkillChat Backend 🚀");
