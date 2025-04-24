@@ -40,7 +40,8 @@ export const navItems = {
     {
       icon: <MessageSquare className="h-5 w-5" />,
       label: "SkillChat",
-      path: "/messages",
+      path: "http://localhost:3000",
+      external: true,
     },
   ],
   you: [

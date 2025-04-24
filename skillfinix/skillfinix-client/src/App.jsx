@@ -16,9 +16,8 @@ const App = () => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (mobile) {
-        setSidebarCollapsed(true);
-      }
+      // Remove the automatic collapsing on mobile
+      // This allows the hamburger menu to work on all screen sizes
     };
     
     window.addEventListener('resize', handleResize);
@@ -42,10 +41,10 @@ const App = () => {
       
       {/* Main Content Area with dynamic width adjustment */}
       <div 
-  className={`flex-1 transition-all duration-300 flex flex-col overflow-hidden ${
-    sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]'
-  }`}
->
+        className={`flex-1 transition-all duration-300 flex flex-col overflow-hidden ${
+          sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]'
+        }`}
+      >
         <Routes>
           {/* Home/Landing route */}
           <Route 

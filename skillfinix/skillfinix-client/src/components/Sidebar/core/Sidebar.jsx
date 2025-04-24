@@ -24,10 +24,8 @@ const Sidebar = ({ onToggle, collapsed: propCollapsed }) => {
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
-      if (window.innerWidth < 768) {
-        setCollapsed(true);
-        if (onToggle) onToggle(true);
-      }
+      // Remove the automatic collapsing on small screens
+      // This allows the hamburger menu to work on all screen sizes
     };
 
     window.addEventListener("resize", handleResize);
