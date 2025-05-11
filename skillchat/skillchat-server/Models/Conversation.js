@@ -11,11 +11,12 @@ const ConversationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    name: {
+    groupName: {
       type: String,
       required: function () {
         return this.isGroup;
       },
+      default: "",
     },
     unreadCounts: [
       {

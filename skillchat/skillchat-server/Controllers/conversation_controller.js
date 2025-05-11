@@ -94,8 +94,61 @@ const getConversationList = async (req, res) => {
   }
 };
 
+
+const createGroupConversation = async (req, res) => {
+  try {
+    console.log("Group creation payload:", req.body);
+    
+    const { members: memberIds, isGroup, groupName } = req.body;
+
+    if (!memberIds || !groupName) {
+      return res.status(400).json({
+        error: "Please provide all required fields: members and groupName",
+      });
+    }
+
+    // Ensure the current user is part of the group
+    if (!memberIds.includes(req.user.id)) {
+      memberIds.push(req.user.id);
+    }
+
+    // Create a new group conversation with consistent field naming
+    const newGroupConversation = await Conversation.create({
+      members: memberIds,
+      isGroup: true,
+      groupName: groupName,
+      unreadCounts: memberIds.map((memberId) => ({
+        userId: memberId,
+        count: 0,
+      })),
+      latestmessage: "Group created", // Initialize with a message
+    });
+
+    // Populate the members data
+    await newGroupConversation.populate("members", "-password");
+
+    // Ensure the response has all necessary fields for frontend
+    const responseData = newGroupConversation.toObject();
+
+    // Ensure members is an array
+    if (!Array.isArray(responseData.members)) {
+      responseData.members = [];
+    }
+
+    // Return the new group conversation
+    return res.status(200).json(responseData);
+  } catch (error) {
+    console.error("Group creation error:", error);
+    return res.status(500).json({ error: "Internal Server Error: " + error.message });
+  }
+};
+
+
 module.exports = {
   createConversation,
   getConversation,
   getConversationList,
+  createGroupConversation
 };
+
+

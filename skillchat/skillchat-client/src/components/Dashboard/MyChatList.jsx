@@ -147,7 +147,44 @@ const MyChatList = ({ searchQuery }) => {
       const jsonData = await response.json();
 
       setMessageList(jsonData);
-      setReceiver(receiver);
+      
+      // Get conversation details for group or individual chat
+      const chatResponse = await fetch(`${hostName}/conversation/${chatid}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": localStorage.getItem("token"),
+        },
+      });
+      
+      if (chatResponse.ok) {
+        const chatData = await chatResponse.json();
+        if (chatData.isGroup) {
+          setReceiver({
+            _id: chatData._id,
+            name: chatData.groupName,
+            isGroup: true,
+            members: chatData.members.filter(m => m._id !== user._id)
+          });
+        } else {
+          // Make sure receiver exists before setting it
+          if (receiver) {
+            setReceiver(receiver);
+          } else {
+            // If receiver is null but chat is not a group, set from chat data
+            const otherMember = chatData.members.find(m => m._id !== user._id);
+            if (otherMember) {
+              setReceiver(otherMember);
+            }
+          }
+        }
+      } else {
+        // Only set receiver if it's not null
+        if (receiver) {
+          setReceiver(receiver);
+        }
+      }
+      
       setIsChatLoading(false);
 
       const newlist = chatlist.map((chat) => {
@@ -171,47 +208,37 @@ const MyChatList = ({ searchQuery }) => {
       }, 100);
     } catch (error) {
       console.log(error);
+      setIsChatLoading(false);
     }
   };
 
-  // Format the preview message to ensure it's truncated properly
   const formatPreviewMessage = (message) => {
     if (!message) return "No messages yet";
-    
-    // Truncate message for display
     return message.length > 30 ? `${message.substring(0, 30)}...` : message;
   };
 
   return !isLoading ? (
-    <Box
-      h="100%"
-      display="flex"
-      flexDirection="column"
-      backgroundColor={bgColor}
-      overflowY="auto"
-      sx={scrollbarconfig}
-    >
-      {/* Chat List */}
-      <Box flex={1} pt={1}>
+    <Box w="100%" h="100%" overflowY="auto" sx={scrollbarconfig}>
+      <Box>
         {filteredChats.length === 0 ? (
           <Box textAlign="center" py={10}>
-            <Text color="gray.500">No chats available</Text>
-            <Text fontSize="sm" color="gray.500">
-              Start a new conversation
+            <Text fontSize="lg" color="gray.500">
+              No chats found
             </Text>
           </Box>
         ) : (
           filteredChats.map((chat) => {
-            const isActiveChat = chat._id === activeChatId;
-            const unreadCount = chat.unreadCounts.find(
+            const isActiveChat = activeChatId === chat._id;
+            const unreadCountObj = chat.unreadCounts.find(
               (unread) => unread.userId === user._id
-            )?.count;
+            );
+            const unreadCount = unreadCountObj ? unreadCountObj.count : 0;
             const hasUnread = unreadCount > 0;
 
             return (
               <Box
-                key={chat.members[0]._id}
-                onClick={() => handleChatOpen(chat._id, chat.members[0])}
+                key={chat._id}
+                onClick={() => handleChatOpen(chat._id, chat.isGroup ? null : chat.members[0])}
                 py={3}
                 px={3}
                 cursor="pointer"
@@ -224,11 +251,14 @@ const MyChatList = ({ searchQuery }) => {
                 _dark={{ borderColor: "gray.700" }}
               >
                 <Flex align="center">
-                  <Avatar
-                    src={chat.members[0].profilePic}
-                    name={chat.members[0].name}
-                    size="md"
-                    mr={3}
+                  <Avatar 
+                    src={chat.isGroup 
+                      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.groupName)}&background=random&bold=true` 
+                      : chat.members[0]?.profilePic
+                    } 
+                    name={chat.isGroup ? chat.groupName : chat.members[0]?.name} 
+                    size="md" 
+                    mr={3} 
                   />
                   <Box flex={1} pr={1}>
                     <Flex justify="space-between" align="center">
@@ -237,37 +267,30 @@ const MyChatList = ({ searchQuery }) => {
                         color={isActiveChat ? activeTextColor : undefined}
                         fontSize="md"
                       >
-                        {chat.members[0].name}
+                        {chat.isGroup ? chat.groupName : chat.members[0]?.name}
+                        {chat.isGroup && (
+                          <Text as="span" fontSize="xs" ml={1} color={subtitleColor}>
+                            • {chat.members?.length || 0} members
+                          </Text>
+                        )}
                       </Text>
                       <Text fontSize="xs" color={subtitleColor}>
-                        {new Date(chat.updatedAt).toDateString() ===
-                        new Date().toDateString()
+                        {new Date(chat.updatedAt).toDateString() === new Date().toDateString()
                           ? new Date(chat.updatedAt).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                             })
                           : new Date(chat.updatedAt).toDateString() ===
-                            new Date(
-                              new Date().setDate(new Date().getDate() - 1)
-                            ).toDateString()
+                            new Date(new Date().setDate(new Date().getDate() - 1)).toDateString()
                           ? "Yesterday"
                           : new Date(chat.updatedAt).toLocaleDateString()}
                       </Text>
                     </Flex>
                     <Flex align="center" justify="space-between" mt={1}>
-                      <Tooltip 
-                        label={chat.latestmessage || "No messages yet"} 
-                        placement="top" 
-                        hasArrow 
-                        openDelay={500}
-                      >
+                      <Tooltip label={chat.latestmessage || "No messages yet"} placement="top" hasArrow openDelay={500}>
                         <Text
                           fontSize="sm"
-                          color={
-                            isOtherUserTyping && isActiveChat
-                              ? "blue.500"
-                              : subtitleColor
-                          }
+                          color={isOtherUserTyping && isActiveChat ? "blue.500" : subtitleColor}
                           noOfLines={1}
                           width="calc(100% - 25px)"
                           isTruncated
@@ -277,16 +300,15 @@ const MyChatList = ({ searchQuery }) => {
                           textOverflow="ellipsis"
                           whiteSpace="nowrap"
                         >
-                          {chat.latestmessage &&
-                            chat.latestmessage.senderId === user._id && (
-                              <Icon
-                                as={CheckIcon}
-                                boxSize={3}
-                                mr={1}
-                                flexShrink={0}
-                                color={hasUnread ? "gray.400" : "blue.500"}
-                              />
-                            )}
+                          {chat.latestmessage && chat.latestmessage.senderId === user._id && (
+                            <Icon
+                              as={CheckIcon}
+                              boxSize={3}
+                              mr={1}
+                              flexShrink={0}
+                              color={hasUnread ? "gray.400" : "blue.500"}
+                            />
+                          )}
                           {isOtherUserTyping && isActiveChat
                             ? "typing..."
                             : formatPreviewMessage(chat.latestmessage)}
@@ -310,7 +332,7 @@ const MyChatList = ({ searchQuery }) => {
                 </Flex>
               </Box>
             );
-          })
+          })          
         )}
       </Box>
     </Box>
