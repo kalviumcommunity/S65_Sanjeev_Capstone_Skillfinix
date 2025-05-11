@@ -1,4 +1,5 @@
 import React from "react";
+// const skillchathost = import.meta.env.VITE_SKILLCHAT;
 
 import {
   Home,
@@ -40,7 +41,7 @@ export const navItems = {
     {
       icon: <MessageSquare className="h-5 w-5" />,
       label: "SkillChat",
-      path: "http://localhost:3000",
+      path: "http://localhost:2006",
       external: true,
     },
   ],

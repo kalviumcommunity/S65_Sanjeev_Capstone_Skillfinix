@@ -25,6 +25,8 @@ app.use("/api/exchanges", exchangeRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/ratings', ratingRoutes);
 
+
+app.use('/api/barters')
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,

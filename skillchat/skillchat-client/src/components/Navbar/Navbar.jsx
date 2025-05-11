@@ -23,6 +23,7 @@ import {
 import ProfileMenu from "./ProfileMenu";
 import chatContext from "../../context/chatContext";
 import { useNavigate } from "react-router-dom";
+import { Home } from "react-feather";
 
 const Sidebar = (props) => {
   const context = useContext(chatContext);
@@ -46,7 +47,6 @@ const Sidebar = (props) => {
   const hoverBgColor = useColorModeValue("blue.500", "gray.800");
   const activeBgColor = useColorModeValue("blue.500", "gray.700");
   const borderColor = useColorModeValue("blue.400", "gray.700");
-
   useEffect(() => {
     const storedColorMode = localStorage.getItem("chakra-ui-color-mode");
     setColorMode(storedColorMode || "light");
@@ -75,6 +75,25 @@ const Sidebar = (props) => {
   // Show back button on mobile when in chat
   const showBackButton = activeChatId !== "" && window.innerWidth < 768;
 
+  const iconData = {
+    icon: (
+      <Box position="relative" w="32px" h="32px">
+        <Home size={32} /> {/* Home icon */}
+        <FaArrowLeft
+          size={12}
+          style={{
+            position: "absolute",
+            bottom: "0",
+            right: "-8px",
+            transform: "translate(0%, 50%)",
+          }}
+        /> {/* Small Arrow inside Home */}
+      </Box>
+    ),
+    label: "Go Back to Home",
+    path: "http://localhost:2812",
+  };
+
   return (
     <Box
       bg={bgColor}
@@ -91,6 +110,20 @@ const Sidebar = (props) => {
     >
       {/* Top Section */}
       <VStack pt={6} pb={4} spacing={6}>
+        <Tooltip label={iconData.label} placement="right">
+          <IconButton
+            aria-label={iconData.label}
+            icon={iconData.icon}
+            size="lg"
+            variant="ghost"
+            fontSize="xl"
+            onClick={() => (window.location.href = iconData.path)}
+            _hover={{ bg: hoverBgColor }}
+            bg="transparent"
+            borderRadius="full"
+          />
+        </Tooltip>
+
         <Tooltip label="Chats" placement="right">
           <IconButton
             aria-label="Chats"
