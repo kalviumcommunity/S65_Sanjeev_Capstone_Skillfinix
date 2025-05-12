@@ -1,18 +1,12 @@
 {
-  "name": "frontend",
+  "name": "skillchat-client",
   "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
   "dependencies": {
-    "@chakra-ui/icons": "^2.2.4",
-    "@chakra-ui/react": "^3.16.1",
+    "@chakra-ui/icons": "^2.1.1",
+    "@chakra-ui/react": "^2.10.7",
+    "@cloudinary/react": "^1.13.0",
+    "@cloudinary/url-gen": "^1.19.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@testing-library/jest-dom": "^5.17.0",
@@ -25,6 +19,7 @@
     "marked": "^12.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-feather": "^2.0.10",
     "react-icons": "^5.5.0",
     "react-lottie": "^1.2.10",
     "react-router-dom": "^6.30.0",
@@ -36,7 +31,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env BROWSER=none react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -58,5 +53,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
