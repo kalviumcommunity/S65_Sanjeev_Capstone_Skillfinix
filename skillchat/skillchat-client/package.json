@@ -14,7 +14,6 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.9",
     "chakra-icons": "^0.0.0",
-    "cross-env": "^7.0.3",
     "dotenv": "^16.5.0",
     "framer-motion": "^11.18.2",
     "marked": "^12.0.1",
@@ -31,12 +30,12 @@
     "use-long-press": "^3.2.0",
     "web-vitals": "^2.1.4"
   },
-"scripts": {
-  "start": "cross-env BROWSER=none react-scripts start",
-  "build": "react-scripts build",
-  "test": "react-scripts test",
-  "eject": "react-scripts eject"
-},
+  "scripts": {
+    "start": "cross-env BROWSER=none react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -54,5 +53,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
