@@ -17,17 +17,12 @@ const modelId = "gemini-1.5-flash";
 const model = configuration.getGenerativeModel({ model: modelId });
 
 const sendMessage = async (req, res) => {
-  var imageurl = "";
-
-  if (req.file) {
-    imageurl = await imageupload(req.file, false);
-  }
-
   try {
-    const { conversationId, sender, text } = req.body;
-    if (!conversationId || !sender || !text) {
+    const { conversationId, senderId, text, imageUrl } = req.body;
+    
+    if (!conversationId || !senderId || (!text && !imageUrl)) {
       return res.status(400).json({
-        error: "Please fill all the fields",
+        error: "Please fill all the required fields",
       });
     }
 
@@ -36,34 +31,67 @@ const sendMessage = async (req, res) => {
       "-password"
     );
 
-    //check if conversation contains bot
-    var isbot = false;
+    if (!conversation) {
+      return res.status(404).json({
+        error: "Conversation not found",
+      });
+    }
 
-    conversation.members.forEach((member) => {
-      if (member != sender && member.email.includes("bot")) {
-        isbot = true;
-      }
-    });
+    // Check if conversation contains a bot
+    const botMember = conversation.members.find(
+      (member) => member._id != senderId && member.email.includes("bot")
+    );
 
-    if (!isbot) {
-      const newMessage = new Message({
+    if (botMember) {
+      // Handle AI conversation
+      const userMessage = await Message.create({
         conversationId,
-        sender,
+        senderId,
         text,
-        imageurl,
-        seenBy: [sender],
+        imageUrl,
+        seenBy: [senderId],
       });
 
-      await newMessage.save();
-      console.log("newMessage saved");
+      // Get AI response
+      const aiResponse = await getAiResponse(text, senderId, conversationId);
+      
+      if (aiResponse === -1) {
+        return res.status(400).json({
+          error: "Failed to generate AI response",
+        });
+      }
 
+      // Update conversation with latest message
+      conversation.latestmessage = text || "[Image]";
       conversation.updatedAt = new Date();
       await conversation.save();
 
-      res.json(newMessage);
+      return res.json({
+        userMessage,
+        aiResponse,
+      });
+    } else {
+      // Normal conversation
+      const newMessage = await Message.create({
+        conversationId,
+        senderId,
+        text,
+        imageUrl,
+        seenBy: [senderId],
+      });
+
+      conversation.latestmessage = text || "[Image]";
+      conversation.updatedAt = new Date();
+      await conversation.save();
+
+      return res.json(newMessage);
     }
   } catch (error) {
-    res.status(500).send("Internal Server Error");
+    console.error("Error in sendMessage:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      details: error.message,
+    });
   }
 };
 
@@ -168,70 +196,69 @@ const getPresignedUrl = async (req, res) => {
 };
 
 const getAiResponse = async (prompt, senderId, conversationId) => {
-  var currentMessages = [];
-  const conv = await Conversation.findById(conversationId);
-  const botId = conv.members.find((member) => member != senderId);
-
-  const messagelist = await Message.find({
-    conversationId: conversationId,
-  })
-    .sort({ createdAt: -1 })
-    .limit(20);
-
-  messagelist.forEach((message) => {
-    if (message.senderId == senderId) {
-      currentMessages.push({
-        role: "user",
-        parts: message.text,
-      });
-    } else {
-      currentMessages.push({
-        role: "model",
-        parts: message.text,
-      });
-    }
-  });
-
-  // reverse currentMessages
-  currentMessages = currentMessages.reverse();
-
   try {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Find the bot member
+    const botMember = conversation.members.find(
+      (memberId) => memberId.toString() !== senderId.toString() && 
+      memberId.toString().includes("bot")
+    );
+
+    if (!botMember) {
+      throw new Error("No bot member found in conversation");
+    }
+
+    // Get conversation history
+    const messageHistory = await Message.find({
+      conversationId: conversationId,
+    })
+      .sort({ createdAt: 1 })
+      .limit(20);
+
+    // Prepare chat history
+    const chatHistory = messageHistory.map((msg) => ({
+      role: msg.senderId.toString() === senderId.toString() ? "user" : "model",
+      parts: msg.text || "",
+    }));
+
+    // Start chat session
     const chat = model.startChat({
-      history: currentMessages,
+      history: chatHistory,
       generationConfig: {
         maxOutputTokens: 2000,
       },
     });
 
+    // Get AI response
     const result = await chat.sendMessage(prompt);
     const response = result.response;
-    var responseText = response.text();
+    const responseText = response.text();
 
-    if (responseText.length < 1) {
-      responseText = "Woops!! thats soo long ask me something in short.";
-      return -1;
+    if (!responseText || responseText.length < 1) {
+      return "I couldn't generate a response. Please try again with a different prompt.";
     }
 
-    await Message.create({
-      conversationId: conversationId,
-      senderId: senderId,
-      text: prompt,
-      seenBy: [{ user: botId, seenAt: new Date() }],
-    });
-
+    // Create the bot's response message
     const botMessage = await Message.create({
-      conversationId: conversationId,
-      senderId: botId,
+      conversationId,
+      senderId: botMember,
       text: responseText,
+      seenBy: [senderId],
     });
 
-    conv.latestmessage = responseText;
-    await conv.save();
+    // Update conversation
+    conversation.latestmessage = responseText;
+    conversation.updatedAt = new Date();
+    await conversation.save();
 
     return botMessage;
   } catch (error) {
-    console.log(error.message);
-    return "some error occured while generating response";
+    console.error("Error in getAiResponse:", error);
+    return "Sorry, I encountered an error while processing your request. Please try again later.";
   }
 };
 

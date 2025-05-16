@@ -123,8 +123,15 @@ export const ChatArea = () => {
       }
     });
 
+    // In the socket event listeners useEffect
     socket.on("receive-message", (data) => {
-      setMessageList((prev) => [...prev, data]);
+      // Handle AI responses separately if needed
+      if (data.isAiResponse) {
+        setMessageList((prev) => [...prev, data.aiResponse]);
+      } else {
+        setMessageList((prev) => [...prev, data]);
+      }
+      
       setTimeout(() => {
         document.getElementById("chat-box")?.scrollTo({
           top: document.getElementById("chat-box").scrollHeight,
@@ -231,7 +238,48 @@ export const ChatArea = () => {
       imageUrl: file ? `${awsHost}${key}` : null,
     };
 
-    socket.emit("send-message", data);
+    try {
+      const response = await axios.post(`${hostName}/message/`, data, {
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": localStorage.getItem("token"),
+        },
+      });
+
+      // If it's an AI conversation, we might get both user message and AI response
+      if (response.data.aiResponse) {
+        setMessageList((prev) => [...prev, response.data.userMessage, response.data.aiResponse]);
+      } else {
+        setMessageList((prev) => [...prev, response.data]);
+      }
+
+      // Update chat list
+      const truncatedMessage = messageText ? truncateMessage(messageText) : file ? "[File]" : "";
+      
+      const updatedChatList = myChatList
+        .map((chat) => {
+          if (chat._id === activeChatId) {
+            return {
+              ...chat,
+              latestmessage: truncatedMessage,
+              updatedAt: new Date().toUTCString()
+            };
+          }
+          return chat;
+        })
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      
+      setMyChatList(updatedChatList);
+
+    } catch (error) {
+      toast({
+        title: "Failed to send message",
+        description: error.response?.data?.error || error.message,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
 
     setTimeout(() => {
       document.getElementById("chat-box")?.scrollTo({
@@ -239,24 +287,6 @@ export const ChatArea = () => {
         behavior: "smooth",
       });
     }, 100);
-
-    // Update chat list with truncated message preview
-    const truncatedMessage = messageText ? truncateMessage(messageText) : file ? "[File]" : "";
-    
-    const updatedChatList = myChatList
-      .map((chat) => {
-        if (chat._id === activeChatId) {
-          return {
-            ...chat,
-            latestmessage: truncatedMessage,
-            updatedAt: new Date().toUTCString()
-          };
-        }
-        return chat;
-      })
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    
-    setMyChatList(updatedChatList);
   };
 
   const removeMessageFromList = (messageId) => {
