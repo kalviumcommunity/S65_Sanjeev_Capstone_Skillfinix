@@ -1,15 +1,14 @@
 const express = require('express');
+const userController = require('../controllers/userController');
+const authController = require('../controllers/authController');
+
 const router = express.Router();
-const { registerUser, loginUser, getUserProfile, getUserById, getConnections, getPotentialPartners,updateUserProfile } = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware');
 
-router.post('/signup', registerUser);
+// Protect all routes after this middleware
+router.use(authController.protect);
 
-router.post('/login', loginUser);
+router.get('/me', userController.getUserProfile);
+router.patch('/me', userController.updateProfile);
+router.post('/:id/reviews', userController.addReview);
 
-router.get('/profile', authMiddleware,getUserProfile);
-router.get('/:id', authMiddleware, getUserById);
-router.get('/connections/list', authMiddleware,getConnections);
-router.get('/partners/suggestions', authMiddleware, getPotentialPartners);
-router.put('/profile/update', authMiddleware, updateUserProfile);
 module.exports = router;

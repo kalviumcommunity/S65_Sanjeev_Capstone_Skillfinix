@@ -8,6 +8,7 @@ import { Outlet } from "react-router-dom";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./components/Home";
 import Dashboard from "./components/Dashboard/Dashboard";
+import ChatState from "./context/appState";
 
 const token = localStorage.getItem("token");
 

@@ -1,7 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import {
   Box,
-  Flex,
   useDisclosure,
   Avatar,
   IconButton,
@@ -36,17 +35,31 @@ const Sidebar = (props) => {
     setReceiver,
     socket,
   } = context;
+  
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [colorMode, setColorMode] = useState(
     localStorage.getItem("chakra-ui-color-mode") || "light"
   );
   const navigate = useNavigate();
 
-  // Instagram-like blue color scheme
-  const bgColor = useColorModeValue("blue.600", "gray.900");
-  const hoverBgColor = useColorModeValue("blue.500", "gray.800");
-  const activeBgColor = useColorModeValue("blue.500", "gray.700");
-  const borderColor = useColorModeValue("blue.400", "gray.700");
+  // 🎯 PERFECT WHATSAPP SIDEBAR COLORS + INDIGO FOR CHAT
+  const bgColorDefault = useColorModeValue("#f0f2f5", "#202c33");
+  const iconColorDefault = useColorModeValue("#54656f", "#aebac1");
+  const hoverBgDefault = useColorModeValue("#e5e7eb", "#2a3942");
+  
+  // 🔵 SPECIAL INDIGO-600 FOR CHAT ICON ONLY
+  const chatActiveBg = useColorModeValue("#4f46e5", "#4f46e5"); // INDIGO-600 for both modes
+  
+  // 🟢 GREEN FOR OTHER ICONS (WhatsApp style)
+  const otherActiveBg = useColorModeValue("#00a884", "#00a884"); // WhatsApp green
+  
+  const borderColor = useColorModeValue("#e9edef", "#313d45");
+
+  // Use props if provided, otherwise use defaults
+  const bgColor = props.sidebarBgColor || bgColorDefault;
+  const iconColor = props.sidebarIconColor || iconColorDefault;
+  const hoverBg = props.sidebarHover || hoverBgDefault;
+
   useEffect(() => {
     const storedColorMode = localStorage.getItem("chakra-ui-color-mode");
     setColorMode(storedColorMode || "light");
@@ -58,27 +71,19 @@ const Sidebar = (props) => {
   const handleToggle = () => {
     const newColorMode = colorMode === "dark" ? "light" : "dark";
     setColorMode(newColorMode);
-    props.toggleColorMode();
+    if (props.toggleColorMode) {
+      props.toggleColorMode();
+    }
   };
 
   const isActive = (route) => {
-    return activeRoute === route ? true : false;
+    return activeRoute === route;
   };
-
-  const handleBack = () => {
-    socket.emit("leave-chat", activeChatId);
-    setActiveChatId("");
-    setMessageList([]);
-    setReceiver({});
-  };
-
-  // Show back button on mobile when in chat
-  const showBackButton = activeChatId !== "" && window.innerWidth < 768;
 
   const iconData = {
     icon: (
       <Box position="relative" w="32px" h="32px">
-        <Home size={32} /> {/* Home icon */}
+        <Home size={32} />
         <FaArrowLeft
           size={12}
           style={{
@@ -87,7 +92,7 @@ const Sidebar = (props) => {
             right: "-8px",
             transform: "translate(0%, 50%)",
           }}
-        /> {/* Small Arrow inside Home */}
+        />
       </Box>
     ),
     label: "Go Back to Home",
@@ -96,21 +101,24 @@ const Sidebar = (props) => {
 
   return (
     <Box
-      bg={bgColor}
-      color="white"
+      w="72px"
       h="100vh"
-      w={{ base: showBackButton ? "0" : "72px", md: "72px" }}
+      bg={bgColor}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      py={4}
       position="fixed"
       left={0}
       top={0}
-      zIndex={1}
-      display={{ base: showBackButton ? "none" : "flex", md: "flex" }}
-      flexDirection="column"
+      zIndex={1000}
+      borderRightWidth="1px"
+      borderColor={borderColor}
       boxShadow="md"
     >
       {/* Top Section */}
-      <VStack pt={6} pb={4} spacing={6}>
-        <Tooltip label={iconData.label} placement="right">
+      <VStack pt={2} pb={4} spacing={4}>
+        <Tooltip label={iconData.label} placement="right" hasArrow>
           <IconButton
             aria-label={iconData.label}
             icon={iconData.icon}
@@ -118,82 +126,86 @@ const Sidebar = (props) => {
             variant="ghost"
             fontSize="xl"
             onClick={() => (window.location.href = iconData.path)}
-            _hover={{ bg: hoverBgColor }}
+            _hover={{ bg: hoverBg }}
             bg="transparent"
             borderRadius="full"
+            color={iconColor}
           />
         </Tooltip>
 
-        <Tooltip label="Chats" placement="right">
+        {/* 🔵 CHAT ICON - SPECIAL INDIGO-600 COLOR */}
+        <Tooltip label="Chats" placement="right" hasArrow>
           <IconButton
             aria-label="Chats"
             icon={<FaComments />}
             size="lg"
             variant="ghost"
             fontSize="xl"
-            isActive={isActive("dashboard")}
             onClick={() => navigate("/dashboard")}
-            _hover={{ bg: hoverBgColor }}
-            bg={isActive("dashboard") ? activeBgColor : "transparent"}
+            _hover={{ bg: hoverBg }}
+            bg={isActive("dashboard") ? chatActiveBg : "transparent"}
+            color={isActive("dashboard") ? "white" : iconColor}
             borderRadius="full"
           />
         </Tooltip>
 
-        <Tooltip label="SkillSnaps" placement="right">
+        <Tooltip label="SkillSnaps" placement="right" hasArrow>
           <IconButton
             aria-label="SkillSnaps"
             icon={<FaArchive />}
             size="lg"
             variant="ghost"
             fontSize="xl"
-            _hover={{ bg: hoverBgColor }}
+            _hover={{ bg: hoverBg }}
             borderRadius="full"
+            color={iconColor}
           />
         </Tooltip>
 
-        <Tooltip label="SkillMeet" placement="right">
+        <Tooltip label="SkillMeet" placement="right" hasArrow>
           <IconButton
             aria-label="SkillMeet"
             icon={<FaUsers />}
             size="lg"
             variant="ghost"
             fontSize="xl"
-            isActive={isActive("Barters")}
             onClick={() => navigate("/Barters")}
-            _hover={{ bg: hoverBgColor }}
-            bg={isActive("Barters") ? activeBgColor : "transparent"}
+            _hover={{ bg: hoverBg }}
+            bg={isActive("Barters") ? otherActiveBg : "transparent"}
+            color={isActive("Barters") ? "white" : iconColor}
             borderRadius="full"
           />
         </Tooltip>
 
-        <Tooltip label="SkillRooms" placement="right">
+        <Tooltip label="SkillRooms" placement="right" hasArrow>
           <IconButton
             aria-label="SkillRooms"
             icon={<FaUserFriends />}
             size="lg"
             variant="ghost"
             fontSize="xl"
-            _hover={{ bg: hoverBgColor }}
+            _hover={{ bg: hoverBg }}
             borderRadius="full"
+            color={iconColor}
           />
         </Tooltip>
       </VStack>
 
       <Spacer />
 
-      {/* Bottom Section with User Profile - WhatsApp style */}
-      <VStack pb={6} spacing={6}>
-        <Tooltip label="Settings" placement="right">
+      {/* Bottom Section */}
+      <VStack pb={4} spacing={4}>
+        <Tooltip label="Settings" placement="right" hasArrow>
           <IconButton
             aria-label="Settings"
             icon={<FaCog />}
             size="lg"
             variant="ghost"
             fontSize="xl"
-            isActive={isActive("settings")}
             onClick={() => navigate("/settings")}
-            _hover={{ bg: hoverBgColor }}
-            bg={isActive("settings") ? activeBgColor : "transparent"}
+            _hover={{ bg: hoverBg }}
+            bg={isActive("settings") ? otherActiveBg : "transparent"}
+            color={isActive("settings") ? "white" : iconColor}
             borderRadius="full"
           />
         </Tooltip>
@@ -201,6 +213,7 @@ const Sidebar = (props) => {
         <Tooltip
           label={colorMode === "dark" ? "Light Mode" : "Dark Mode"}
           placement="right"
+          hasArrow
         >
           <IconButton
             aria-label="Toggle Color Mode"
@@ -209,22 +222,29 @@ const Sidebar = (props) => {
             size="lg"
             variant="ghost"
             fontSize="xl"
-            _hover={{ bg: hoverBgColor }}
+            _hover={{ bg: hoverBg }}
             borderRadius="full"
+            color={iconColor}
           />
         </Tooltip>
 
-        <Tooltip label="Your Profile" placement="right">
-          <Avatar
-            size="md"
-            name={user?.name || "User"}
-            src={user?.profilePic}
-            cursor="pointer"
-            onClick={onOpen}
-            border="2px solid"
-            borderColor={borderColor}
-          />
-        </Tooltip>
+        {isAuthenticated && user && (
+          <Tooltip label="Your Profile" placement="right" hasArrow>
+            <Avatar
+              size="md"
+              name={user?.name || "User"}
+              src={user?.profilePic}
+              cursor="pointer"
+              onClick={onOpen}
+              border="2px solid"
+              borderColor={borderColor}
+              _hover={{
+                transform: "scale(1.05)",
+                transition: "transform 0.2s",
+              }}
+            />
+          </Tooltip>
+        )}
       </VStack>
 
       {isAuthenticated && (

@@ -1,14 +1,15 @@
 const express = require('express');
-const router = express.Router();
 const skillController = require('../controllers/skillController');
-const auth = require('../middlewares/authMiddleware');
+const authController = require('../controllers/authController');
+
+const router = express.Router();
 
 router.get('/', skillController.getAllSkills);
-router.get('/categories', skillController.getSkillCategories);
-router.get('/:id', skillController.getSkillById);
-router.get('/:id/users', skillController.getSkillUsers);
+router.get('/search', skillController.searchSkills);
 
-router.post('/', auth, skillController.createSkill);
-router.put('/:id', auth, skillController.updateSkill);
+// Protected routes (require authentication)
+router.use(authController.protect);
+
+router.post('/', skillController.createSkill);
 
 module.exports = router;

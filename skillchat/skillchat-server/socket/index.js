@@ -4,7 +4,7 @@ const registerHandlers = require("./handlers");
 const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000", // Frontend URL
+      origin: "http://localhost:2006", // Frontend URL
       methods: ["GET", "POST"],
       credentials: true
     },

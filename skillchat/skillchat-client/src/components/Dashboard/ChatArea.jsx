@@ -4,7 +4,7 @@ import {
   Text,
   useToast,
   useDisclosure,
-  useColorModeValue
+  useColorModeValue,
 } from "@chakra-ui/react";
 import Lottie from "react-lottie";
 import animationdata from "../../typingAnimation.json";
@@ -16,7 +16,6 @@ import axios from "axios";
 import SingleMessage from "./SingleMessage";
 import { ChatInput } from "./ChatInput"; // Import the WhatsApp-style input
 import { marked } from "marked";
-
 
 const scrollbarconfig = {
   "&::-webkit-scrollbar": {
@@ -47,7 +46,7 @@ const truncateMessage = (message, maxLength = 40) => {
   return message.substring(0, maxLength) + "...";
 };
 
-export const ChatArea = () => {
+const ChatArea = () => {
   const context = useContext(chatContext);
   const {
     hostName,
@@ -67,7 +66,7 @@ export const ChatArea = () => {
   } = context;
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const containerBgColor = useColorModeValue("white", "gray.800");
+  const containerBgColor = useColorModeValue("white", "#0b141a");
 
   // Lottie Options for typing animation
   const defaultOptions = {
@@ -88,7 +87,7 @@ export const ChatArea = () => {
     };
 
     window.addEventListener("popstate", handlePopState);
-    
+
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
@@ -131,7 +130,7 @@ export const ChatArea = () => {
       } else {
         setMessageList((prev) => [...prev, data]);
       }
-      
+
       setTimeout(() => {
         document.getElementById("chat-box")?.scrollTo({
           top: document.getElementById("chat-box").scrollHeight,
@@ -181,113 +180,95 @@ export const ChatArea = () => {
     }
   };
 
-  const handleSendMessage = async (e, messageText, file) => {
-    e.preventDefault();
-    const awsHost = "https://conversa-chat.s3.ap-south-1.amazonaws.com/";
+const handleSendMessage = async (e, messageText, file) => {
+  e.preventDefault();
+  const awsHost = "https://conversa-chat.s3.ap-south-1.amazonaws.com/";
+  
+  socket.emit("stop-typing", {
+    typer: user._id,
+    conversationId: activeChatId,
+  });
 
-    socket.emit("stop-typing", {
-      typer: user._id,
-      conversationId: activeChatId,
+  if (messageText === "" && !file) {
+    toast({
+      title: "Message cannot be empty",
+      status: "warning",
+      duration: 3000,
+      isClosable: true,
     });
+    return;
+  }
 
-    if (messageText === "" && !file) {
+  let key;
+  if (file) {
+    try {
+      const { url, fields } = await getPreSignedUrl(file.name, file.type);
+      const formData = new FormData();
+      Object.entries({ ...fields, file }).forEach(([k, v]) => {
+        formData.append(k, v);
+      });
+      
+      const response = await axios.post(url, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.status !== 201) {
+        throw new Error("Failed to upload file");
+      }
+      key = fields.key;
+    } catch (error) {
       toast({
-        title: "Message cannot be empty",
-        status: "warning",
+        title: error.message,
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
       return;
     }
+  }
 
-    let key;
-    if (file) {
-      try {
-        const { url, fields } = await getPreSignedUrl(file.name, file.type);
-        const formData = new FormData();
-        Object.entries({ ...fields, file }).forEach(([k, v]) => {
-          formData.append(k, v);
-        });
-
-        const response = await axios.post(url, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
-        if (response.status !== 201) {
-          throw new Error("Failed to upload file");
-        }
-
-        key = fields.key;
-      } catch (error) {
-        toast({
-          title: error.message,
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
-    }
-
-    const data = {
-      text: messageText,
-      conversationId: activeChatId,
-      senderId: user._id,
-      imageUrl: file ? `${awsHost}${key}` : null,
-    };
-
-    try {
-      const response = await axios.post(`${hostName}/message/`, data, {
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": localStorage.getItem("token"),
-        },
-      });
-
-      // If it's an AI conversation, we might get both user message and AI response
-      if (response.data.aiResponse) {
-        setMessageList((prev) => [...prev, response.data.userMessage, response.data.aiResponse]);
-      } else {
-        setMessageList((prev) => [...prev, response.data]);
-      }
-
-      // Update chat list
-      const truncatedMessage = messageText ? truncateMessage(messageText) : file ? "[File]" : "";
-      
-      const updatedChatList = myChatList
-        .map((chat) => {
-          if (chat._id === activeChatId) {
-            return {
-              ...chat,
-              latestmessage: truncatedMessage,
-              updatedAt: new Date().toUTCString()
-            };
-          }
-          return chat;
-        })
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      
-      setMyChatList(updatedChatList);
-
-    } catch (error) {
-      toast({
-        title: "Failed to send message",
-        description: error.response?.data?.error || error.message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-
-    setTimeout(() => {
-      document.getElementById("chat-box")?.scrollTo({
-        top: document.getElementById("chat-box").scrollHeight,
-        behavior: "smooth",
-      });
-    }, 100);
+  const data = {
+    text: messageText,
+    conversationId: activeChatId,
+    senderId: user._id,
+    imageUrl: file ? `${awsHost}${key}` : null,
   };
+
+  // CRITICAL FIX: Use socket instead of HTTP
+  socket.emit("send-message", data);
+  
+  // Update chat list locally for immediate UI feedback
+  const truncatedMessage = messageText
+    ? truncateMessage(messageText)
+    : file
+    ? "[File]"
+    : "";
+    
+  const updatedChatList = myChatList
+    .map((chat) => {
+      if (chat._id === activeChatId) {
+        return {
+          ...chat,
+          latestmessage: truncatedMessage,
+          updatedAt: new Date().toUTCString(),
+        };
+      }
+      return chat;
+    })
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    
+  setMyChatList(updatedChatList);
+
+  setTimeout(() => {
+    document.getElementById("chat-box")?.scrollTo({
+      top: document.getElementById("chat-box").scrollHeight,
+      behavior: "smooth",
+    });
+  }, 100);
+};
+
 
   const removeMessageFromList = (messageId) => {
     setMessageList((prev) => prev.filter((msg) => msg._id !== messageId));
@@ -317,7 +298,7 @@ export const ChatArea = () => {
               overflowY="auto"
               sx={scrollbarconfig}
               mx={1}
-              bg={containerBgColor} 
+              bg={containerBgColor}
               pb="80px" // Add padding to account for fixed input area
             >
               {messageList?.map((message, index) =>
@@ -339,12 +320,7 @@ export const ChatArea = () => {
             </Box>
 
             {/* Typing indicator */}
-            <Box
-              position="absolute"
-              bottom="60px"
-              left={4}
-              w="fit-content"
-            >
+            <Box position="absolute" bottom="60px" left={4} w="fit-content">
               {isOtherUserTyping && (
                 <Lottie
                   options={defaultOptions}
@@ -355,9 +331,9 @@ export const ChatArea = () => {
                 />
               )}
             </Box>
-            
+
             {/* WhatsApp-style input with proper layout */}
-            <ChatInput 
+            <ChatInput
               onSendMessage={handleSendMessage}
               onOpenFileUpload={onOpen}
             />
@@ -391,3 +367,5 @@ export const ChatArea = () => {
     </>
   );
 };
+
+export default ChatArea;

@@ -3,23 +3,26 @@ const Conversation = require("../Models/Conversation.js");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const imageupload = require("../config/imageupload.js");
 const dotenv = require("dotenv");
+
 dotenv.config({ path: "./.env" });
+
 const {
   AWS_BUCKET_NAME,
   AWS_SECRET,
   AWS_ACCESS_KEY,
 } = require("../secrets.js");
+
 const { S3Client } = require("@aws-sdk/client-s3");
 const { createPresignedPost } = require("@aws-sdk/s3-presigned-post");
 
 const configuration = new GoogleGenerativeAI(process.env.GENERATIVE_API_KEY);
-const modelId = "gemini-1.5-flash";
+const modelId = "gemini-2.0-flash";
 const model = configuration.getGenerativeModel({ model: modelId });
 
 const sendMessage = async (req, res) => {
   try {
     const { conversationId, senderId, text, imageUrl } = req.body;
-    
+
     if (!conversationId || !senderId || (!text && !imageUrl)) {
       return res.status(400).json({
         error: "Please fill all the required fields",
@@ -39,7 +42,10 @@ const sendMessage = async (req, res) => {
 
     // Check if conversation contains a bot
     const botMember = conversation.members.find(
-      (member) => member._id != senderId && member.email.includes("bot")
+      (member) =>
+        member._id.toString() !== senderId.toString() &&
+        member.email &&
+        member.email.includes("bot")
     );
 
     if (botMember) {
@@ -49,13 +55,13 @@ const sendMessage = async (req, res) => {
         senderId,
         text,
         imageUrl,
-        seenBy: [senderId],
+        seenBy: [{ user: senderId, seenAt: new Date() }],
       });
 
       // Get AI response
       const aiResponse = await getAiResponse(text, senderId, conversationId);
-      
-      if (aiResponse === -1) {
+
+      if (!aiResponse || aiResponse === -1) {
         return res.status(400).json({
           error: "Failed to generate AI response",
         });
@@ -77,7 +83,7 @@ const sendMessage = async (req, res) => {
         senderId,
         text,
         imageUrl,
-        seenBy: [senderId],
+        seenBy: [{ user: senderId, seenAt: new Date() }],
       });
 
       conversation.latestmessage = text || "[Image]";
@@ -102,18 +108,23 @@ const allMessage = async (req, res) => {
       deletedFrom: { $ne: req.user.id },
     });
 
-    messages.forEach(async (message) => {
-      let isUserAddedToSeenBy = false;
-      message.seenBy.forEach((element) => {
-        if (element.user == req.user.id) {
-          isUserAddedToSeenBy = true;
+    // Use Promise.all to handle async operations properly
+    await Promise.all(
+      messages.map(async (message) => {
+        let isUserAddedToSeenBy = false;
+
+        message.seenBy.forEach((element) => {
+          if (element.user.toString() === req.user.id.toString()) {
+            isUserAddedToSeenBy = true;
+          }
+        });
+
+        if (!isUserAddedToSeenBy) {
+          message.seenBy.push({ user: req.user.id, seenAt: new Date() });
+          await message.save();
         }
-      });
-      if (!isUserAddedToSeenBy) {
-        message.seenBy.push({ user: req.user.id });
-      }
-      await message.save();
-    });
+      })
+    );
 
     res.json(messages);
   } catch (error) {
@@ -125,14 +136,23 @@ const allMessage = async (req, res) => {
 const deletemesage = async (req, res) => {
   const msgid = req.body.messageid;
   const userids = req.body.userids;
+
   try {
     const message = await Message.findById(msgid);
 
-    userids.forEach(async (userid) => {
-      if (!message.deletedby.includes(userid)) {
-        message.deletedby.push(userid);
-      }
-    });
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    // Use Promise.all to handle async operations properly
+    await Promise.all(
+      userids.map(async (userid) => {
+        if (!message.deletedFrom.includes(userid)) {
+          message.deletedFrom.push(userid);
+        }
+      })
+    );
+
     await message.save();
     res.status(200).send("Message deleted successfully");
   } catch (error) {
@@ -195,60 +215,85 @@ const getPresignedUrl = async (req, res) => {
   }
 };
 
+// PERFECT AI Response Function - Fixed for Bujji Bot
 const getAiResponse = async (prompt, senderId, conversationId) => {
   try {
-    const conversation = await Conversation.findById(conversationId);
-    if (!conversation) {
-      throw new Error("Conversation not found");
+    console.log("getAiResponse called with:", {
+      prompt,
+      senderId,
+      conversationId,
+    });
+
+    if (!prompt || !senderId || !conversationId) {
+      console.error("Missing required parameters for getAiResponse");
+      return -1;
     }
 
-    // Find the bot member
+    const conversation = await Conversation.findById(conversationId).populate(
+      "members",
+      "-password"
+    );
+
+    if (!conversation) {
+      console.error("Conversation not found");
+      return -1;
+    }
+
+    // Find the bot member correctly
     const botMember = conversation.members.find(
-      (memberId) => memberId.toString() !== senderId.toString() && 
-      memberId.toString().includes("bot")
+      (member) =>
+        member._id.toString() !== senderId.toString() &&
+        member.email &&
+        member.email.includes("bot")
     );
 
     if (!botMember) {
-      throw new Error("No bot member found in conversation");
+      console.error("No bot member found in conversation");
+      console.log(
+        "Available members:",
+        conversation.members.map((m) => ({ id: m._id, email: m.email }))
+      );
+      return -1;
     }
 
-    // Get conversation history
-    const messageHistory = await Message.find({
-      conversationId: conversationId,
-    })
-      .sort({ createdAt: 1 })
-      .limit(20);
+    console.log("Bot member found:", botMember.email);
 
-    // Prepare chat history
-    const chatHistory = messageHistory.map((msg) => ({
-      role: msg.senderId.toString() === senderId.toString() ? "user" : "model",
-      parts: msg.text || "",
-    }));
-
-    // Start chat session
+    // Create simple chat session without history to avoid API issues
     const chat = model.startChat({
-      history: chatHistory,
       generationConfig: {
-        maxOutputTokens: 2000,
+        maxOutputTokens: 500,
+        temperature: 0.7,
       },
     });
 
-    // Get AI response
-    const result = await chat.sendMessage(prompt);
+    console.log("Sending prompt to AI:", prompt);
+    const result = await model.generateContent([
+      "You are Bujji, a helpful and friendly AI assistant. Keep responses concise and helpful.",
+      prompt,
+    ]);
+
     const response = result.response;
     const responseText = response.text();
 
     if (!responseText || responseText.length < 1) {
-      return "I couldn't generate a response. Please try again with a different prompt.";
+      console.error("Empty response from AI");
+      return -1;
     }
+
+    console.log(
+      "AI response generated:",
+      responseText.substring(0, 50) + "..."
+    );
 
     // Create the bot's response message
     const botMessage = await Message.create({
       conversationId,
-      senderId: botMember,
+      senderId: botMember._id,
       text: responseText,
-      seenBy: [senderId],
+      seenBy: [{ user: senderId, seenAt: new Date() }],
     });
+
+    console.log("Bot message created successfully:", botMessage._id);
 
     // Update conversation
     conversation.latestmessage = responseText;
@@ -258,7 +303,8 @@ const getAiResponse = async (prompt, senderId, conversationId) => {
     return botMessage;
   } catch (error) {
     console.error("Error in getAiResponse:", error);
-    return "Sorry, I encountered an error while processing your request. Please try again later.";
+    console.error("Error stack:", error.stack);
+    return -1;
   }
 };
 
@@ -271,60 +317,80 @@ const sendMessageHandler = async (data) => {
     receiverId,
     isReceiverInsideChatRoom,
   } = data;
-  const conversation = await Conversation.findById(conversationId);
-  if (!isReceiverInsideChatRoom) {
-    const message = await Message.create({
-      conversationId,
-      senderId,
-      text,
-      imageUrl,
-      seenBy: [],
-    });
 
-    // update conversation latest message and increment unread count of receiver by 1
-    conversation.latestmessage = text;
-    conversation.unreadCounts.map((unread) => {
-      if (unread.userId.toString() == receiverId.toString()) {
-        unread.count += 1;
-      }
-    });
-    await conversation.save();
-    return message;
-  } else {
-    // create new message with seenby receiver
-    const message = await Message.create({
-      conversationId,
-      senderId,
-      text,
-      seenBy: [
-        {
-          user: receiverId,
-          seenAt: new Date(),
-        },
-      ],
-    });
-    conversation.latestmessage = text;
-    await conversation.save();
-    return message;
+  try {
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    if (!isReceiverInsideChatRoom) {
+      const message = await Message.create({
+        conversationId,
+        senderId,
+        text,
+        imageUrl,
+        seenBy: [], // Empty array for unseen messages
+      });
+
+      // update conversation latest message and increment unread count of receiver by 1
+      conversation.latestmessage = text || "[Image]";
+
+      conversation.unreadCounts = conversation.unreadCounts.map((unread) => {
+        if (unread.userId.toString() === receiverId.toString()) {
+          unread.count += 1;
+        }
+        return unread;
+      });
+
+      await conversation.save();
+      return message;
+    } else {
+      // create new message with seenby receiver
+      const message = await Message.create({
+        conversationId,
+        senderId,
+        text,
+        imageUrl,
+        seenBy: [
+          {
+            user: receiverId,
+            seenAt: new Date(),
+          },
+        ],
+      });
+
+      conversation.latestmessage = text || "[Image]";
+      await conversation.save();
+      return message;
+    }
+  } catch (error) {
+    console.error("Error in sendMessageHandler:", error);
+    return null;
   }
 };
 
 const deleteMessageHandler = async (data) => {
   const { messageId, deleteFrom } = data;
-  const message = await Message.findById(messageId);
-
-  if (!message) {
-    return false;
-  }
 
   try {
-    deleteFrom.forEach(async (userId) => {
-      if (!message.deletedFrom.includes(userId)) {
-        message.deletedFrom.push(userId);
-      }
-    });
-    await message.save();
+    const message = await Message.findById(messageId);
 
+    if (!message) {
+      return false;
+    }
+
+    // Use Promise.all to handle async operations properly
+    await Promise.all(
+      deleteFrom.map(async (userId) => {
+        if (!message.deletedFrom.includes(userId)) {
+          message.deletedFrom.push(userId);
+        }
+      })
+    );
+
+    await message.save();
     return true;
   } catch (error) {
     console.log(error.message);
