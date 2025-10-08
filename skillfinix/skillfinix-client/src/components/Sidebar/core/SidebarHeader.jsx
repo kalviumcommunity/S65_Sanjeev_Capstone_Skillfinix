@@ -13,7 +13,7 @@ const SidebarHeader = ({ collapsed, toggleSidebar }) => {
           className="p-2 rounded-full hover:bg-gray-100"
           onClick={toggleSidebar}
         >
-          <Menu className="h-5 w-5 text-gray-700" />
+          <Menu className="w-5 h-5 text-gray-700" />
         </button>
         
         {/* Always show logo, with reduced size when collapsed */}

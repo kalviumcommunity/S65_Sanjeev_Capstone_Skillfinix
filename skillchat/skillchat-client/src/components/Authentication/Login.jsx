@@ -22,11 +22,17 @@ import {
 } from "@chakra-ui/react";
 import { FaLock } from "react-icons/fa";
 import { ArrowBackIcon } from "@chakra-ui/icons";
+import { useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import chatContext from "../../context/chatContext";
 
 const CFaLock = chakra(FaLock);
 
 const Login = (props) => {
   const toast = useToast();
+  const navigate = useNavigate();
+  const context = useContext(chatContext);
+  const { setUser, setIsAuthenticated } = context;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,29 +71,94 @@ const Login = (props) => {
     try {
       setIsLoggingIn(true);
       
-      setTimeout(() => {
+      // Make actual API call to your backend
+      const hostName = process.env.REACT_APP_API_URL || "http://localhost:5001";
+      const response = await fetch(`${hostName}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          otp: otp
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store auth token in localStorage (use "token" to match ChatState.js)
+        localStorage.setItem('token', data.authtoken);
+        
+        // Store user data in localStorage
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+          // Update context with user data
+          setUser(data.user);
+        }
+        
+        // Update authentication state
+        setIsAuthenticated(true);
+        
         showToast("Login successful", "You are now logged in", "success");
         
-        console.log("Navigating to dashboard");
+        // Close modal if it exists
+        if (props.onClose) {
+          props.onClose();
+        }
         
-        setIsLoggingIn(false);
-      }, 1500);
+        // Navigate to dashboard
+        navigate("/dashboard");
+        
+      } else {
+        showToast("Error", data.error || "Login failed", "error");
+      }
       
     } catch (error) {
-      showToast("Error", "Login failed", "error");
+      console.error("Login error:", error);
+      showToast("Error", "Network error. Please try again.", "error");
+    } finally {
       setIsLoggingIn(false);
     }
   };
 
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
+    
+    if (!email) {
+      showToast("Error", "Email is required to send OTP", "error");
+      return;
+    }
+    
     setSending(true);
 
-    // Simulate OTP sending
-    setTimeout(() => {
-      showToast("OTP sent", "OTP sent to your email", "success");
+    try {
+      const hostName = process.env.REACT_APP_API_URL || "http://localhost:5001";
+      const response = await fetch(`${hostName}/auth/getotp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast("OTP sent", "OTP sent to your email", "success");
+      } else {
+        showToast("Error", data.error || "Failed to send OTP", "error");
+      }
+      
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      showToast("Error", "Network error. Please try again.", "error");
+    } finally {
       setSending(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -109,7 +180,7 @@ const Login = (props) => {
         <Heading color="purple.400">Welcome Back</Heading>
         <Card minW={{ base: "90%", md: "468px" }} borderRadius={15} shadow={0}>
           <CardBody p={0}>
-            <form>
+            <form onSubmit={handleLogin}>
               <Stack spacing={4}>
                 {forgotPasswordShow && (
                   <Tooltip label="login" aria-label="A tooltip">
@@ -134,6 +205,7 @@ const Login = (props) => {
                       focusBorderColor="purple.500"
                       onChange={(e) => setEmail(e.target.value)}
                       value={email}
+                      required
                     />
                   </InputGroup>
                   {forgotPasswordShow && (
@@ -142,6 +214,7 @@ const Login = (props) => {
                       fontSize={"sm"}
                       onClick={(e) => handleSendOtp(e)}
                       isDisabled={sending}
+                      type="button"
                     >
                       {sending ? <Spinner size="sm" /> : "Send OTP"}
                     </Button>
@@ -166,12 +239,14 @@ const Login = (props) => {
                         focusBorderColor="purple.500"
                         onChange={(e) => setPassword(e.target.value)}
                         value={password}
+                        required={!forgotPasswordShow}
                       />
                       <InputRightElement mx={1}>
                         <Button
                           fontSize={"x-small"}
                           size={"xs"}
                           onClick={handleShowClick}
+                          type="button"
                         >
                           {showPassword ? "Hide" : "Show"}
                         </Button>
@@ -198,6 +273,7 @@ const Login = (props) => {
                         focusBorderColor="purple.500"
                         onChange={(e) => setOtp(e.target.value)}
                         value={otp}
+                        required={forgotPasswordShow}
                       />
                     </InputGroup>
                   </FormControl>
@@ -208,7 +284,6 @@ const Login = (props) => {
                   variant="solid"
                   colorScheme="purple"
                   width="full"
-                  onClick={handleLogin}
                   isLoading={isLoggingIn}
                   loadingText="Logging in"
                 >

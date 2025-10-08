@@ -81,7 +81,7 @@ const Home = () => {
         <ModalContent w={{ base: "95vw" }}>
           <ModalHeader></ModalHeader>
           <ModalBody>
-            <Auth tabindex={index} />
+            <Auth tabindex={index} onClose={onClose} />
           </ModalBody>
           <ModalCloseButton />
         </ModalContent>

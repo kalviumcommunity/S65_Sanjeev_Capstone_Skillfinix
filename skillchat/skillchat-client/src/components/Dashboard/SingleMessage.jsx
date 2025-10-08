@@ -71,6 +71,27 @@ const SingleMessage = ({
     socket.emit("delete-message", data);
   };
 
+  // Convert message text to HTML if it exists
+  const renderMessageContent = () => {
+    if (!message.text) {
+      return <Text fontSize="sm">No content</Text>;
+    }
+    
+    return (
+      <Text
+        overflowX="scroll"
+        sx={scrollbarconfig}
+        dangerouslySetInnerHTML={
+          typeof markdownToHtml === 'function' && message.text
+            ? markdownToHtml(message.text)
+            : { __html: message.text }
+        }
+        fontSize="sm"
+        mb={0}
+      ></Text>
+    );
+  };
+
   return (
     <>
       <Flex
@@ -163,13 +184,7 @@ const SingleMessage = ({
                 />
               )}
               <Flex direction="column">
-                <Text
-                  overflowX="scroll"
-                  sx={scrollbarconfig}
-                  dangerouslySetInnerHTML={markdownToHtml(message.text)}
-                  fontSize="sm"
-                  mb={0}
-                ></Text>
+                {renderMessageContent()}
                 
                 <Flex 
                   justify="end" 
