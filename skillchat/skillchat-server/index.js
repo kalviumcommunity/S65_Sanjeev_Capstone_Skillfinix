@@ -2,12 +2,12 @@ const express = require("express");
 const connectDB = require("./db.js");
 const cors = require("cors");
 const http = require("http");
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const { initSocket } = require("./socket/index.js");
 const app = express();
 
 const corsOptions = {
-  origin: ["http://localhost:3000"], // Add your frontend URL
+  origin: ["http://localhost:2006"], // Add your frontend URL
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization", "auth-token"]

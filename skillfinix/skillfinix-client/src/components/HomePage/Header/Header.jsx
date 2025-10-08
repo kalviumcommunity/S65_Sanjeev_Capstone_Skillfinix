@@ -15,6 +15,8 @@ import {
 } from "react-feather";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
+import VideoUploadForm from '../../Videos/VideoUploadForm';
+
 
 const Header = ({ darkMode = false, sidebarCollapsed = true }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -431,7 +433,7 @@ const Header = ({ darkMode = false, sidebarCollapsed = true }) => {
             {showCreateMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 create-dropdown">
                 <a
-                  href="#"
+                  href="/upload"
                   className="flex items-center px-3 py-1.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
                 >
                   <Upload className="h-4 w-4 mr-2 flex-shrink-0" />

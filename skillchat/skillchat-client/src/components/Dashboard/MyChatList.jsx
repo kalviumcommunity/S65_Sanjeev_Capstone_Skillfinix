@@ -18,7 +18,6 @@ import {
 import { CheckIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { useToast } from "@chakra-ui/react";
 import chatContext from "../../context/chatContext";
-import wavFile from "../../assets/newmessage.wav";
 
 const scrollbarconfig = {
   "&::-webkit-scrollbar": {
@@ -36,8 +35,7 @@ const scrollbarconfig = {
   },
 };
 
-const MyChatList = ({ searchQuery }) => {
-  var sound = new Audio(wavFile);
+const MyChatList = ({ searchQuery, activeTab }) => {
   const toast = useToast();
   const context = useContext(chatContext);
   const {
@@ -56,24 +54,54 @@ const MyChatList = ({ searchQuery }) => {
     isOtherUserTyping,
   } = context;
 
-  const bgColor = useColorModeValue("white", "gray.800");
-  const hoverBgColor = useColorModeValue("gray.100", "gray.700");
-  const activeBgColor = useColorModeValue("blue.50", "gray.700");
-  const activeTextColor = useColorModeValue("blue.800", "blue.100");
-  const unreadBgColor = useColorModeValue("blue.500", "blue.200");
-  const unreadTextColor = useColorModeValue("white", "gray.800");
-  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+  // Fixed dark mode colors - only change dark mode (second value)
+  const bgColor = useColorModeValue("white", "#0b141a");
+  const hoverBgColor = useColorModeValue("gray.100", "#202c33");
+  const activeBgColor = useColorModeValue("blue.50", "#2a3942");
+  const activeTextColor = useColorModeValue("blue.800", "#e9edef");
+  const unreadBgColor = useColorModeValue("blue.500", "#00a884");
+  const unreadTextColor = useColorModeValue("white", "#111b21");
+  const subtitleColor = useColorModeValue("gray.500", "#8696a0");
+  const borderColor = useColorModeValue("gray.100", "#313d45");
+
+  // Simple notification sound function
+  const playNotificationSound = () => {
+    try {
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = "sine";
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.5
+      );
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log("Notification sound could not be played:", error);
+    }
+  };
 
   useEffect(() => {
     socket.on("new-message-notification", async (data) => {
-      var newlist = chatlist;
-
+      var newlist = [...chatlist]; // Fixed: Create proper copy
       let chatIndex = newlist.findIndex(
         (chat) => chat._id === data.conversationId
       );
+
       if (chatIndex === -1) {
         newlist.unshift(data.conversation);
       }
+
       chatIndex = newlist.findIndex((chat) => chat._id === data.conversationId);
       newlist[chatIndex].latestmessage = data.text;
 
@@ -87,30 +115,48 @@ const MyChatList = ({ searchQuery }) => {
           }
         );
         newlist[chatIndex].updatedAt = new Date();
+
+        let updatedChat = newlist.splice(chatIndex, 1)[0];
+        newlist.unshift(updatedChat);
+        setMyChatList([...newlist]);
+
+        // Fixed: Use notification function instead of undefined sound
+        if (activeChatId !== data.conversationId) {
+          playNotificationSound();
+        }
       }
-
-      let updatedChat = newlist.splice(chatIndex, 1)[0];
-      newlist.unshift(updatedChat);
-
-      setMyChatList([...newlist]);
-
-      let sender = newlist.find((chat) => chat._id === data.conversationId)
-        .members[0];
-
-      activeChatId !== data.conversationId &&
-        sound.play().catch((error) => {
-          console.log(error);
-        });
     });
 
     return () => {
       socket.off("new-message-notification");
     };
-  }, [chatlist, activeChatId]);
+  }, [chatlist, activeChatId, socket, user._id, setMyChatList]);
 
   const filteredChats = chatlist.filter((chat) => {
-    if (!searchQuery) return true;
-    return chat.members[0].name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!searchQuery) {
+      // Apply tab filtering when no search query
+      switch (activeTab) {
+        case "unread":
+          const unreadCountObj = chat.unreadCounts.find(
+            (unread) => unread.userId === user._id
+          );
+          return unreadCountObj && unreadCountObj.count > 0;
+        case "favorites":
+          return chat.isFavorite;
+        case "groups":
+          return chat.isGroup;
+        default:
+          return true;
+      }
+    }
+
+    // Search filtering
+    const searchTerm = searchQuery.toLowerCase();
+    if (chat.isGroup) {
+      return chat.groupName?.toLowerCase().includes(searchTerm);
+    } else {
+      return chat.members[0]?.name?.toLowerCase().includes(searchTerm);
+    }
   });
 
   const handleChatOpen = async (chatid, receiver) => {
@@ -118,73 +164,43 @@ const MyChatList = ({ searchQuery }) => {
       setIsChatLoading(true);
       setMessageList([]);
       setIsOtherUserTyping(false);
+
       const msg = document.getElementById("new-message");
       if (msg) {
-        document.getElementById("new-message").value = "";
-        document.getElementById("new-message").focus();
+        msg.value = "";
+        msg.focus();
       }
 
-      setIsOtherUserTyping(false);
       await socket.emit("stop-typing", {
         typer: user._id,
         conversationId: activeChatId,
       });
       await socket.emit("leave-chat", activeChatId);
-
       socket.emit("join-chat", { roomId: chatid, userId: user._id });
       setActiveChatId(chatid);
 
-      const response = await fetch(`${hostName}/message/${chatid}/${user._id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": localStorage.getItem("token"),
-        },
-      });
+      const response = await fetch(
+        `${hostName}/message/${chatid}/${user._id}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token": localStorage.getItem("token"),
+          },
+        }
+      );
+
       if (!response.ok) {
         throw new Error("Failed to fetch data");
       }
-      const jsonData = await response.json();
 
+      const jsonData = await response.json();
       setMessageList(jsonData);
-      
-      // Get conversation details for group or individual chat
-      const chatResponse = await fetch(`${hostName}/conversation/${chatid}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": localStorage.getItem("token"),
-        },
-      });
-      
-      if (chatResponse.ok) {
-        const chatData = await chatResponse.json();
-        if (chatData.isGroup) {
-          setReceiver({
-            _id: chatData._id,
-            name: chatData.groupName,
-            isGroup: true,
-            members: chatData.members.filter(m => m._id !== user._id)
-          });
-        } else {
-          // Make sure receiver exists before setting it
-          if (receiver) {
-            setReceiver(receiver);
-          } else {
-            // If receiver is null but chat is not a group, set from chat data
-            const otherMember = chatData.members.find(m => m._id !== user._id);
-            if (otherMember) {
-              setReceiver(otherMember);
-            }
-          }
-        }
-      } else {
-        // Only set receiver if it's not null
-        if (receiver) {
-          setReceiver(receiver);
-        }
+
+      if (receiver) {
+        setReceiver(receiver);
       }
-      
+
       setIsChatLoading(false);
 
       const newlist = chatlist.map((chat) => {
@@ -202,13 +218,23 @@ const MyChatList = ({ searchQuery }) => {
       setMyChatList(newlist);
 
       setTimeout(() => {
-        document.getElementById("chat-box")?.scrollTo({
-          top: document.getElementById("chat-box").scrollHeight,
-        });
+        const chatBox = document.getElementById("chat-box");
+        if (chatBox) {
+          chatBox.scrollTo({
+            top: chatBox.scrollHeight,
+          });
+        }
       }, 100);
     } catch (error) {
       console.log(error);
       setIsChatLoading(false);
+      toast({
+        title: "Error loading chat",
+        description: "Please try again",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -218,128 +244,121 @@ const MyChatList = ({ searchQuery }) => {
   };
 
   return !isLoading ? (
-    <Box w="100%" h="100%" overflowY="auto" sx={scrollbarconfig}>
-      <Box>
-        {filteredChats.length === 0 ? (
-          <Box textAlign="center" py={10}>
-            <Text fontSize="lg" color="gray.500">
-              No chats found
+    <Box h="100%" overflowY="auto" css={scrollbarconfig} bg={bgColor}>
+      {filteredChats.length === 0 ? (
+        <Flex
+          direction="column"
+          align="center"
+          justify="center"
+          h="200px"
+          color={subtitleColor}
+        >
+          <Text>No chats found</Text>
+          {searchQuery && (
+            <Text fontSize="sm" mt={2}>
+              Try adjusting your search terms
             </Text>
-          </Box>
-        ) : (
-          filteredChats.map((chat) => {
-            const isActiveChat = activeChatId === chat._id;
-            const unreadCountObj = chat.unreadCounts.find(
-              (unread) => unread.userId === user._id
-            );
-            const unreadCount = unreadCountObj ? unreadCountObj.count : 0;
-            const hasUnread = unreadCount > 0;
+          )}
+        </Flex>
+      ) : (
+        filteredChats.map((chat) => {
+          const isActiveChat = activeChatId === chat._id;
+          const unreadCountObj = chat.unreadCounts.find(
+            (unread) => unread.userId === user._id
+          );
+          const unreadCount = unreadCountObj ? unreadCountObj.count : 0;
+          const hasUnread = unreadCount > 0;
 
-            return (
-              <Box
-                key={chat._id}
-                onClick={() => handleChatOpen(chat._id, chat.isGroup ? null : chat.members[0])}
-                py={3}
-                px={3}
-                cursor="pointer"
-                bg={isActiveChat ? activeBgColor : "transparent"}
-                _hover={{ bg: isActiveChat ? activeBgColor : hoverBgColor }}
-                transition="all 0.2s"
-                position="relative"
-                borderBottomWidth="1px"
-                borderColor="gray.100"
-                _dark={{ borderColor: "gray.700" }}
-              >
-                <Flex align="center">
-                  <Avatar 
-                    src={chat.isGroup 
-                      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.groupName)}&background=random&bold=true` 
-                      : chat.members[0]?.profilePic
-                    } 
-                    name={chat.isGroup ? chat.groupName : chat.members[0]?.name} 
-                    size="md" 
-                    mr={3} 
-                  />
-                  <Box flex={1} pr={1}>
-                    <Flex justify="space-between" align="center">
-                      <Text
-                        fontWeight={hasUnread ? "bold" : "medium"}
-                        color={isActiveChat ? activeTextColor : undefined}
-                        fontSize="md"
-                      >
-                        {chat.isGroup ? chat.groupName : chat.members[0]?.name}
-                        {chat.isGroup && (
-                          <Text as="span" fontSize="xs" ml={1} color={subtitleColor}>
-                            • {chat.members?.length || 0} members
-                          </Text>
-                        )}
+          return (
+            <Flex
+              key={chat._id}
+              onClick={() =>
+                handleChatOpen(chat._id, chat.isGroup ? null : chat.members[0])
+              }
+              py={3}
+              px={3}
+              cursor="pointer"
+              bg={isActiveChat ? activeBgColor : "transparent"}
+              _hover={{ bg: isActiveChat ? activeBgColor : hoverBgColor }}
+              transition="all 0.2s"
+              borderBottomWidth="1px"
+              borderColor={borderColor}
+            >
+              <Avatar
+                size="md"
+                name={chat.isGroup ? chat.groupName : chat.members[0]?.name}
+                mr={3}
+              />
+
+              <Box flex={1} minWidth={0}>
+                <Flex justify="space-between" align="center" mb={1}>
+                  <Text
+                    fontWeight={hasUnread ? "bold" : "normal"}
+                    color={isActiveChat ? activeTextColor : "inherit"}
+                    fontSize="sm"
+                    noOfLines={1}
+                  >
+                    {chat.isGroup ? chat.groupName : chat.members[0]?.name}
+                  </Text>
+
+                  <Text fontSize="xs" color={subtitleColor}>
+                    {new Date(chat.updatedAt).toDateString() ===
+                    new Date().toDateString()
+                      ? new Date(chat.updatedAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "Yesterday"}
+                  </Text>
+                </Flex>
+
+                <Flex justify="space-between" align="center">
+                  <Text
+                    fontSize="sm"
+                    color={subtitleColor}
+                    noOfLines={1}
+                    fontWeight={hasUnread ? "medium" : "normal"}
+                  >
+                    {isOtherUserTyping && isActiveChat
+                      ? "typing..."
+                      : formatPreviewMessage(chat.latestmessage)}
+                  </Text>
+
+                  {hasUnread && (
+                    <Circle
+                      size={5}
+                      bg={unreadBgColor}
+                      color={unreadTextColor}
+                      ml={2}
+                    >
+                      <Text fontSize="xs" fontWeight="bold">
+                        {unreadCount > 99 ? "99+" : unreadCount}
                       </Text>
-                      <Text fontSize="xs" color={subtitleColor}>
-                        {new Date(chat.updatedAt).toDateString() === new Date().toDateString()
-                          ? new Date(chat.updatedAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : new Date(chat.updatedAt).toDateString() ===
-                            new Date(new Date().setDate(new Date().getDate() - 1)).toDateString()
-                          ? "Yesterday"
-                          : new Date(chat.updatedAt).toLocaleDateString()}
-                      </Text>
-                    </Flex>
-                    <Flex align="center" justify="space-between" mt={1}>
-                      <Tooltip label={chat.latestmessage || "No messages yet"} placement="top" hasArrow openDelay={500}>
-                        <Text
-                          fontSize="sm"
-                          color={isOtherUserTyping && isActiveChat ? "blue.500" : subtitleColor}
-                          noOfLines={1}
-                          width="calc(100% - 25px)"
-                          isTruncated
-                          display="flex"
-                          alignItems="center"
-                          overflow="hidden"
-                          textOverflow="ellipsis"
-                          whiteSpace="nowrap"
-                        >
-                          {chat.latestmessage && chat.latestmessage.senderId === user._id && (
-                            <Icon
-                              as={CheckIcon}
-                              boxSize={3}
-                              mr={1}
-                              flexShrink={0}
-                              color={hasUnread ? "gray.400" : "blue.500"}
-                            />
-                          )}
-                          {isOtherUserTyping && isActiveChat
-                            ? "typing..."
-                            : formatPreviewMessage(chat.latestmessage)}
-                        </Text>
-                      </Tooltip>
-                      {hasUnread && (
-                        <Circle
-                          size="20px"
-                          bg={unreadBgColor}
-                          color={unreadTextColor}
-                          fontSize="xs"
-                          fontWeight="bold"
-                          flexShrink={0}
-                          ml={1}
-                        >
-                          {unreadCount}
-                        </Circle>
-                      )}
-                    </Flex>
-                  </Box>
+                    </Circle>
+                  )}
                 </Flex>
               </Box>
-            );
-          })          
-        )}
-      </Box>
+            </Flex>
+          );
+        })
+      )}
     </Box>
   ) : (
-    <Box margin="auto" w="max-content" mt="30vh">
-      <Spinner size="xl" color="blue.500" />
-    </Box>
+    <Stack spacing={4} p={4} bg={bgColor}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Flex key={i} align="center">
+          <Avatar size="md" mr={3} />
+          <Box flex={1}>
+            <Text fontWeight="bold" color="gray.300">
+              Loading...
+            </Text>
+            <Text fontSize="sm" color="gray.400">
+              Please wait
+            </Text>
+          </Box>
+        </Flex>
+      ))}
+    </Stack>
   );
 };
 

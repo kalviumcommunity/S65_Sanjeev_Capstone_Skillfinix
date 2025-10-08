@@ -73,8 +73,8 @@ export const navItems = {
     },
     {
       icon: <Video className="h-5 w-5" />,
-      label: "Your Videos",
-      path: "/your-videos",
+      label: "Videos",
+      path: "/videos"
     },
     {
       icon: <Bookmark className="h-5 w-5" />,

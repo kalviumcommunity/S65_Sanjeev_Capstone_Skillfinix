@@ -1,16 +1,18 @@
 // App.jsx
-import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom'; 
-import Sidebar from './components/Sidebar/core/Sidebar';
-import LandingPage from './components/HomePage/LandingPage';
-import SkillBartersSection from './components/SkillBarters/SkillBartersSection';
-import Header from './components/HomePage/Header/Header';
-import './index.css'; 
+import React, { useState, useEffect } from "react";
+import { Routes, Route } from "react-router-dom";
+import Sidebar from "./components/Sidebar/core/Sidebar";
+import LandingPage from "./components/HomePage/LandingPage";
+import SkillBartersSection from "./components/SkillBarters/SkillBartersSection";
+import Header from "./components/HomePage/Header/Header";
+import "./index.css";
+import VideoGallery from "./components/Videos/VideoGallery";
+import VideoUploadForm from "./components/Videos/VideoUploadForm";
 
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
+
   // Listen for screen size changes
   useEffect(() => {
     const handleResize = () => {
@@ -19,11 +21,11 @@ const App = () => {
       // Remove the automatic collapsing on mobile
       // This allows the hamburger menu to work on all screen sizes
     };
-    
-    window.addEventListener('resize', handleResize);
+
+    window.addEventListener("resize", handleResize);
     handleResize(); // Set initial state
-    
-    return () => window.removeEventListener('resize', handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Toggle sidebar callback
@@ -34,32 +36,29 @@ const App = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar Component */}
-      <Sidebar 
-        onToggle={handleSidebarToggle} 
-        collapsed={sidebarCollapsed}
-      />
-      
+      <Sidebar onToggle={handleSidebarToggle} collapsed={sidebarCollapsed} />
+
       {/* Main Content Area with dynamic width adjustment */}
-      <div 
+      <div
         className={`flex-1 transition-all duration-300 flex flex-col overflow-hidden ${
-          sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]'
+          sidebarCollapsed ? "ml-[72px]" : "ml-[260px]"
         }`}
       >
         <Routes>
           {/* Home/Landing route */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
-              <LandingPage 
-                sidebarCollapsed={sidebarCollapsed} 
+              <LandingPage
+                sidebarCollapsed={sidebarCollapsed}
                 isMobile={isMobile}
               />
-            } 
+            }
           />
-          
+
           {/* Other routes - with consistent header + scrollable content structure */}
-          <Route 
-            path="/barters" 
+          <Route
+            path="/barters"
             element={
               <div className="flex flex-col h-screen">
                 <Header sidebarCollapsed={sidebarCollapsed} />
@@ -67,12 +66,12 @@ const App = () => {
                   <SkillBartersSection />
                 </div>
               </div>
-            } 
+            }
           />
-          
+
           {/* Explore route */}
-          <Route 
-            path="/explore" 
+          <Route
+            path="/explore"
             element={
               <div className="flex flex-col h-screen">
                 <Header sidebarCollapsed={sidebarCollapsed} />
@@ -81,12 +80,12 @@ const App = () => {
                   <p>Explore Skills Content</p>
                 </div>
               </div>
-            } 
+            }
           />
-          
+
           {/* Trending route */}
-          <Route 
-            path="/trending" 
+          <Route
+            path="/trending"
             element={
               <div className="flex flex-col h-screen">
                 <Header sidebarCollapsed={sidebarCollapsed} />
@@ -95,12 +94,12 @@ const App = () => {
                   <p>Trending Skills Content</p>
                 </div>
               </div>
-            } 
+            }
           />
-          
+
           {/* User Profile route */}
-          <Route 
-            path="/profile" 
+          <Route
+            path="/profile"
             element={
               <div className="flex flex-col h-screen">
                 <Header sidebarCollapsed={sidebarCollapsed} />
@@ -109,7 +108,30 @@ const App = () => {
                   <p>User Profile Content</p>
                 </div>
               </div>
-            } 
+            }
+          />
+          <Route
+            path="/videos"
+            element={
+              <div className="flex flex-col h-screen">
+                <Header sidebarCollapsed={sidebarCollapsed} />
+                <div className="flex-1 overflow-y-auto pt-11 sm:pt-20 p-6 pb-16">
+                  <VideoGallery />
+                </div>
+              </div>
+            }
+          />
+
+          <Route
+            path="/upload"
+            element={
+              <div className="flex flex-col h-screen">
+                <Header sidebarCollapsed={sidebarCollapsed} />
+                <div className="flex-1 overflow-y-auto pt-11 sm:pt-20 p-6 pb-16">
+                  <VideoUploadForm />
+                </div>
+              </div>
+            }
           />
         </Routes>
       </div>
