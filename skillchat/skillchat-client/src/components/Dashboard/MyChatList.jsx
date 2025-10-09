@@ -93,7 +93,7 @@ const MyChatList = ({ searchQuery, activeTab }) => {
 
   useEffect(() => {
     socket.on("new-message-notification", async (data) => {
-      var newlist = [...chatlist]; // Fixed: Create proper copy
+      var newlist = [...chatlist];
       let chatIndex = newlist.findIndex(
         (chat) => chat._id === data.conversationId
       );
@@ -120,7 +120,6 @@ const MyChatList = ({ searchQuery, activeTab }) => {
         newlist.unshift(updatedChat);
         setMyChatList([...newlist]);
 
-        // Fixed: Use notification function instead of undefined sound
         if (activeChatId !== data.conversationId) {
           playNotificationSound();
         }
@@ -134,7 +133,6 @@ const MyChatList = ({ searchQuery, activeTab }) => {
 
   const filteredChats = chatlist.filter((chat) => {
     if (!searchQuery) {
-      // Apply tab filtering when no search query
       switch (activeTab) {
         case "unread":
           const unreadCountObj = chat.unreadCounts.find(
@@ -150,7 +148,6 @@ const MyChatList = ({ searchQuery, activeTab }) => {
       }
     }
 
-    // Search filtering
     const searchTerm = searchQuery.toLowerCase();
     if (chat.isGroup) {
       return chat.groupName?.toLowerCase().includes(searchTerm);
@@ -269,11 +266,16 @@ const MyChatList = ({ searchQuery, activeTab }) => {
           const unreadCount = unreadCountObj ? unreadCountObj.count : 0;
           const hasUnread = unreadCount > 0;
 
+          // Fully fixed: profile and group pics visible
+          const chatUser = chat.isGroup ? null : chat.members[0];
+          const displayName = chat.isGroup ? chat.groupName : chatUser?.name;
+          const profilePic = chat.isGroup ? chat.groupPic : chatUser?.profilePic;
+
           return (
             <Flex
               key={chat._id}
               onClick={() =>
-                handleChatOpen(chat._id, chat.isGroup ? null : chat.members[0])
+                handleChatOpen(chat._id, chat.isGroup ? null : chatUser)
               }
               py={3}
               px={3}
@@ -283,10 +285,13 @@ const MyChatList = ({ searchQuery, activeTab }) => {
               transition="all 0.2s"
               borderBottomWidth="1px"
               borderColor={borderColor}
+              align="center"
             >
+              {/* profile/group Avatar - only this is changed! */}
               <Avatar
                 size="md"
-                name={chat.isGroup ? chat.groupName : chat.members[0]?.name}
+                name={displayName}
+                src={profilePic}
                 mr={3}
               />
 
@@ -298,9 +303,8 @@ const MyChatList = ({ searchQuery, activeTab }) => {
                     fontSize="sm"
                     noOfLines={1}
                   >
-                    {chat.isGroup ? chat.groupName : chat.members[0]?.name}
+                    {displayName}
                   </Text>
-
                   <Text fontSize="xs" color={subtitleColor}>
                     {new Date(chat.updatedAt).toDateString() ===
                     new Date().toDateString()
@@ -323,7 +327,6 @@ const MyChatList = ({ searchQuery, activeTab }) => {
                       ? "typing..."
                       : formatPreviewMessage(chat.latestmessage)}
                   </Text>
-
                   {hasUnread && (
                     <Circle
                       size={5}
