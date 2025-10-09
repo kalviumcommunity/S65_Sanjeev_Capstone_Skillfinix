@@ -11,7 +11,7 @@ const socket = io(hostName, {
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
-  autoConnect: false 
+  autoConnect: false
 });
 
 const ChatState = (props) => {
@@ -32,8 +32,8 @@ const ChatState = (props) => {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Create a memoized fetchData function to avoid recreating on each render
-  const fetchData = useCallback(async () => {
+  // Optimized parallel data fetching
+  const fetchDataParallel = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -42,17 +42,48 @@ const ChatState = (props) => {
         return;
       }
 
-      const response = await fetch(`${hostName}/conversation/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": token,
-        },
-        credentials: "include"  // Important for cross-origin requests with cookies
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
+      // Make both API calls in parallel instead of sequential
+      const [userResponse, conversationResponse] = await Promise.all([
+        fetch(`${hostName}/auth/me`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token": token,
+          },
+          credentials: "include"
+        }),
+        fetch(`${hostName}/conversation/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token": token,
+          },
+          credentials: "include"
+        })
+      ]);
+
+      // Handle user response
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        localStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+        setIsAuthenticated(true);
+
+        // Setup socket with user ID
+        if (userData._id) {
+          socket.emit("setup", userData._id);
+        }
+      } else {
+        throw new Error(`Failed to fetch user: ${userResponse.status}`);
+      }
+
+      // Handle conversation response
+      if (conversationResponse.ok) {
+        const conversationData = await conversationResponse.json();
+        setMyChatList(conversationData);
+        setOriginalChatList(conversationData);
+      } else {
+        if (conversationResponse.status === 401) {
           // Token expired or invalid
           localStorage.removeItem("token");
           localStorage.removeItem("user");
@@ -60,60 +91,18 @@ const ChatState = (props) => {
           setUser({});
           throw new Error("Authentication token expired. Please login again.");
         }
-        throw new Error("Failed to fetch data: " + (await response.text()));
+        throw new Error("Failed to fetch conversations");
       }
-      
-      const jsonData = await response.json();
-      setMyChatList(jsonData);
-      setOriginalChatList(jsonData);
+
     } catch (error) {
-      console.error("Error fetching conversations:", error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Fetch user data function
-  const fetchUser = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setIsAuthenticated(false);
-        setUser({});
-        setIsLoading(false);
-        return;
-      }
-
-      const res = await fetch(`${hostName}/auth/me`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": token,
-        },
-        credentials: "include"
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch user: ${res.status}`);
-      }
-
-      const data = await res.json();
-      
-      // Store user data properly
-      localStorage.setItem("user", JSON.stringify(data));
-      setUser(data);
-      setIsAuthenticated(true);
-      
-      // Setup socket with user ID
-      if (data._id) {
-        socket.emit("setup", data._id);
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error.message);
+      console.error("Error fetching data:", error.message);
       setIsAuthenticated(false);
       setUser({});
+      setMyChatList([]);
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -167,23 +156,23 @@ const ChatState = (props) => {
     };
   }, [receiver._id]);
 
-  // Initial data fetching
+  // Initial data fetching - now parallel and faster
   useEffect(() => {
-    // Always fetch user first, then fetch chats
-    const initializeApp = async () => {
-      await fetchUser();
-      await fetchData();
-    };
-    
-    initializeApp();
-    
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetchDataParallel();
+    } else {
+      setIsLoading(false);
+      setIsAuthenticated(false);
+    }
+
     // Cleanup function for socket
     return () => {
       socket.off("setup");
       socket.off("receiver-online");
       socket.off("receiver-offline");
     };
-  }, [fetchUser, fetchData]);
+  }, [fetchDataParallel]);
 
   // Handle socket connection errors
   useEffect(() => {
@@ -204,10 +193,11 @@ const ChatState = (props) => {
   return (
     <chatContext.Provider
       value={{
-        isAuthenticated,
-        setIsAuthenticated,
+        hostName,
         user,
         setUser,
+        isAuthenticated,
+        setIsAuthenticated,
         receiver,
         setReceiver,
         messageList,
@@ -217,15 +207,14 @@ const ChatState = (props) => {
         myChatList,
         setMyChatList,
         originalChatList,
-        fetchData,
-        hostName,
-        socket,
+        setOriginalChatList,
         isOtherUserTyping,
         setIsOtherUserTyping,
         isChatLoading,
         setIsChatLoading,
         isLoading,
         setIsLoading,
+        socket,
       }}
     >
       {props.children}
