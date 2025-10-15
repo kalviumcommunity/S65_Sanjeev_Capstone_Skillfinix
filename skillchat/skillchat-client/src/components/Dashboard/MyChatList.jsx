@@ -54,7 +54,7 @@ const MyChatList = ({ searchQuery, activeTab }) => {
     isOtherUserTyping,
   } = context;
 
-  // Fixed dark mode colors - only change dark mode (second value)
+  // Fixed dark mode colors
   const bgColor = useColorModeValue("white", "#0b141a");
   const hoverBgColor = useColorModeValue("gray.100", "#202c33");
   const activeBgColor = useColorModeValue("blue.50", "#2a3942");
@@ -63,6 +63,41 @@ const MyChatList = ({ searchQuery, activeTab }) => {
   const unreadTextColor = useColorModeValue("white", "#111b21");
   const subtitleColor = useColorModeValue("gray.500", "#8696a0");
   const borderColor = useColorModeValue("gray.100", "#313d45");
+
+  // 🔥 NEW: Fetch conversations on component mount
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!user || !user._id) return;
+
+      try {
+        const response = await fetch(`${hostName}/conversation/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token": localStorage.getItem("token"),
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch conversations");
+        }
+
+        const conversations = await response.json();
+        setMyChatList(conversations);
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+        toast({
+          title: "Error loading chats",
+          description: "Could not load your conversations",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    };
+
+    fetchConversations();
+  }, [user, hostName, setMyChatList, toast]);
 
   // Simple notification sound function
   const playNotificationSound = () => {
@@ -114,15 +149,16 @@ const MyChatList = ({ searchQuery, activeTab }) => {
             return unread;
           }
         );
-        newlist[chatIndex].updatedAt = new Date();
+      }
 
-        let updatedChat = newlist.splice(chatIndex, 1)[0];
-        newlist.unshift(updatedChat);
-        setMyChatList([...newlist]);
+      newlist[chatIndex].updatedAt = new Date();
+      let updatedChat = newlist.splice(chatIndex, 1)[0];
+      newlist.unshift(updatedChat);
 
-        if (activeChatId !== data.conversationId) {
-          playNotificationSound();
-        }
+      setMyChatList([...newlist]);
+
+      if (activeChatId !== data.conversationId) {
+        playNotificationSound();
       }
     });
 
@@ -172,8 +208,10 @@ const MyChatList = ({ searchQuery, activeTab }) => {
         typer: user._id,
         conversationId: activeChatId,
       });
+
       await socket.emit("leave-chat", activeChatId);
       socket.emit("join-chat", { roomId: chatid, userId: user._id });
+
       setActiveChatId(chatid);
 
       const response = await fetch(
@@ -241,7 +279,12 @@ const MyChatList = ({ searchQuery, activeTab }) => {
   };
 
   return !isLoading ? (
-    <Box h="100%" overflowY="auto" css={scrollbarconfig} bg={bgColor}>
+    <Box
+      overflowY="auto"
+      h="100%"
+      css={scrollbarconfig}
+      bg={bgColor}
+    >
       {filteredChats.length === 0 ? (
         <Flex
           direction="column"
@@ -250,11 +293,11 @@ const MyChatList = ({ searchQuery, activeTab }) => {
           h="200px"
           color={subtitleColor}
         >
-          <Text>No chats found</Text>
+          <Text fontSize="lg" mb={2}>
+            No chats found
+          </Text>
           {searchQuery && (
-            <Text fontSize="sm" mt={2}>
-              Try adjusting your search terms
-            </Text>
+            <Text fontSize="sm">Try adjusting your search terms</Text>
           )}
         </Flex>
       ) : (
@@ -266,10 +309,9 @@ const MyChatList = ({ searchQuery, activeTab }) => {
           const unreadCount = unreadCountObj ? unreadCountObj.count : 0;
           const hasUnread = unreadCount > 0;
 
-          // Fully fixed: profile and group pics visible
           const chatUser = chat.isGroup ? null : chat.members[0];
           const displayName = chat.isGroup ? chat.groupName : chatUser?.name;
-          const profilePic = chat.isGroup ? chat.groupPic : chatUser?.profilePic;
+          const profilePic = chat.isGroup ? chat.groupIcon : chatUser?.profilePic;
 
           return (
             <Flex
@@ -287,7 +329,6 @@ const MyChatList = ({ searchQuery, activeTab }) => {
               borderColor={borderColor}
               align="center"
             >
-              {/* profile/group Avatar - only this is changed! */}
               <Avatar
                 size="md"
                 name={displayName}
@@ -295,17 +336,17 @@ const MyChatList = ({ searchQuery, activeTab }) => {
                 mr={3}
               />
 
-              <Box flex={1} minWidth={0}>
+              <Box flex={1} minW={0}>
                 <Flex justify="space-between" align="center" mb={1}>
                   <Text
-                    fontWeight={hasUnread ? "bold" : "normal"}
+                    fontWeight={hasUnread ? "600" : "500"}
+                    fontSize="15px"
                     color={isActiveChat ? activeTextColor : "inherit"}
-                    fontSize="sm"
-                    noOfLines={1}
+                    isTruncated
                   >
                     {displayName}
                   </Text>
-                  <Text fontSize="xs" color={subtitleColor}>
+                  <Text fontSize="12px" color={subtitleColor} flexShrink={0} ml={2}>
                     {new Date(chat.updatedAt).toDateString() ===
                     new Date().toDateString()
                       ? new Date(chat.updatedAt).toLocaleTimeString([], {
@@ -318,25 +359,27 @@ const MyChatList = ({ searchQuery, activeTab }) => {
 
                 <Flex justify="space-between" align="center">
                   <Text
-                    fontSize="sm"
+                    fontSize="14px"
                     color={subtitleColor}
-                    noOfLines={1}
-                    fontWeight={hasUnread ? "medium" : "normal"}
+                    isTruncated
+                    flex={1}
+                    mr={2}
                   >
                     {isOtherUserTyping && isActiveChat
                       ? "typing..."
                       : formatPreviewMessage(chat.latestmessage)}
                   </Text>
+
                   {hasUnread && (
                     <Circle
-                      size={5}
+                      size="20px"
                       bg={unreadBgColor}
                       color={unreadTextColor}
-                      ml={2}
+                      fontSize="11px"
+                      fontWeight="600"
+                      flexShrink={0}
                     >
-                      <Text fontSize="xs" fontWeight="bold">
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </Text>
+                      {unreadCount > 99 ? "99+" : unreadCount}
                     </Circle>
                   )}
                 </Flex>
@@ -347,15 +390,15 @@ const MyChatList = ({ searchQuery, activeTab }) => {
       )}
     </Box>
   ) : (
-    <Stack spacing={4} p={4} bg={bgColor}>
+    <Stack spacing={3} p={3}>
       {Array.from({ length: 6 }).map((_, i) => (
-        <Flex key={i} align="center">
-          <Avatar size="md" mr={3} />
-          <Box flex={1}>
-            <Text fontWeight="bold" color="gray.300">
+        <Flex key={i} align="center" py={2}>
+          <Spinner size="md" mr={3} />
+          <Box>
+            <Text fontSize="sm" fontWeight="500">
               Loading...
             </Text>
-            <Text fontSize="sm" color="gray.400">
+            <Text fontSize="xs" color={subtitleColor}>
               Please wait
             </Text>
           </Box>
