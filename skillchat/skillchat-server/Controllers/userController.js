@@ -1,64 +1,94 @@
 const {
-    AWS_BUCKET_NAME,
-    AWS_SECRET,
-    AWS_ACCESS_KEY,
-  } = require("../secrets.js");
-  const { S3Client } = require("@aws-sdk/client-s3");
-  const { createPresignedPost } = require("@aws-sdk/s3-presigned-post");
-  const User = require("../Models/User.js");
-  
-  const getPresignedUrl = async (req, res) => {
-    const filename = req.query.filename;
-    const filetype = req.query.filetype;
-  
-    if (!filename || !filetype) {
-      return res
-        .status(400)
-        .json({ error: "Filename and filetype are required" });
-    }
-  
-    if (!filetype.startsWith("image/")) {
-      return res.status(400).json({ error: "Invalid file type" });
-    }
-  
-    const userId = req.user.id;
-    const s3Client = new S3Client({
-      credentials: {
-        accessKeyId: AWS_ACCESS_KEY,
-        secretAccessKey: AWS_SECRET,
+  AWS_BUCKET_NAME,
+  AWS_SECRET,
+  AWS_ACCESS_KEY,
+} = require("../secrets.js");
+const { S3Client } = require("@aws-sdk/client-s3");
+const { createPresignedPost } = require("@aws-sdk/s3-presigned-post");
+const User = require("../Models/User.js");
+const imageupload = require("../config/imageupload.js");
+
+const getPresignedUrl = async (req, res) => {
+  const filename = req.query.filename;
+  const filetype = req.query.filetype;
+
+  if (!filename || !filetype) {
+    return res
+      .status(400)
+      .json({ error: "Filename and filetype are required" });
+  }
+
+  if (!filetype.startsWith("image/")) {
+    return res.status(400).json({ error: "Invalid file type" });
+  }
+
+  const userId = req.user.id;
+  const s3Client = new S3Client({
+    credentials: {
+      accessKeyId: AWS_ACCESS_KEY,
+      secretAccessKey: AWS_SECRET,
+    },
+    region: "ap-south-1",
+  });
+
+  try {
+    const { url, fields } = await createPresignedPost(s3Client, {
+      Bucket: AWS_BUCKET_NAME,
+      Key: `conversa/${userId}/${Math.random()}/${filename}`,
+      Conditions: [["content-length-range", 0, 5 * 1024 * 1024]],
+      Fields: {
+        success_action_status: "201",
       },
-      region: "ap-south-1",
+      Expires: 15 * 60,
     });
-  
-    try {
-      const { url, fields } = await createPresignedPost(s3Client, {
-        Bucket: AWS_BUCKET_NAME,
-        Key: `conversa/${userId}/${Math.random()}/${filename}`,
-        Conditions: [["content-length-range", 0, 5 * 1024 * 1024]],
-        Fields: {
-          success_action_status: "201",
-        },
-        Expires: 15 * 60,
-      });
-  
-      return res.status(200).json({ url, fields });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+
+    return res.status(200).json({ url, fields });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const getOnlineStatus = async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
-  };
-  
-  const getOnlineStatus = async (req, res) => {
-    const userId = req.params.id;
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      res.status(200).json({ isOnline: user.isOnline });
-    } catch (error) {
-      console.log(error);
-      res.status(500).send("Internal Server Error");
+    res.status(200).json({ isOnline: user.isOnline });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+const uploadProfilePhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
     }
-  };
-  
-  module.exports = { getPresignedUrl, getOnlineStatus };  
+
+    const imageUrl = await imageupload(req.file, false);
+    
+    if (!imageUrl || imageUrl === "") {
+      throw new Error("Failed to upload image");
+    }
+
+    // Update user's profilePic in database
+    await User.findByIdAndUpdate(req.user.id, { profilePic: imageUrl });
+
+    return res.status(200).json({ imageUrl });
+  } catch (error) {
+    console.error("Upload profile photo error:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      details: error.message
+    });
+  }
+};
+
+module.exports = { 
+  getPresignedUrl, 
+  getOnlineStatus, 
+  uploadProfilePhoto 
+};
