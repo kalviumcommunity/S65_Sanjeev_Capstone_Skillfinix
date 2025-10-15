@@ -29,6 +29,7 @@ import {
   Tab,
   TabPanels,
   TabPanel,
+  Textarea,
 } from "@chakra-ui/react";
 import {
   AddIcon,
@@ -45,6 +46,7 @@ const NewChats = ({ setactiveTab }) => {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState(""); // NEW: Group description
   const [groupCreationMode, setGroupCreationMode] = useState(false);
   const [tabIndex, setTabIndex] = useState(0);
 
@@ -200,6 +202,7 @@ const NewChats = ({ setactiveTab }) => {
         members: allMembers,
         isGroup: true,
         groupName: groupName,
+        groupDescription: groupDescription, // NEW: Include group description
       };
 
       const response = await fetch(`${hostName}/conversation/group`, {
@@ -228,7 +231,7 @@ const NewChats = ({ setactiveTab }) => {
         _id: data._id,
         name: data.groupName,
         isGroup: true,
-        members: data.members?.filter((m) => m._id !== user._id) || []
+        members: data.members?.filter((m) => m._id !== user._id) || [],
       };
 
       // Add the new group to the chat list
@@ -252,6 +255,7 @@ const NewChats = ({ setactiveTab }) => {
       // Reset states
       setSelectedUsers([]);
       setGroupName("");
+      setGroupDescription(""); // NEW: Reset description
       setIsGroupModalOpen(false);
       setGroupCreationMode(false);
 
@@ -284,6 +288,8 @@ const NewChats = ({ setactiveTab }) => {
   const cancelGroupCreation = () => {
     setGroupCreationMode(false);
     setSelectedUsers([]);
+    setGroupName(""); // NEW: Reset group name
+    setGroupDescription(""); // NEW: Reset description
     setIsGroupModalOpen(false);
   };
 
@@ -499,7 +505,7 @@ const NewChats = ({ setactiveTab }) => {
         </Box>
       )}
 
-      {/* Group Name Modal */}
+      {/* Group Name Modal - UPDATED WITH DESCRIPTION */}
       <Modal
         isOpen={isGroupModalOpen}
         onClose={() => setIsGroupModalOpen(false)}
@@ -509,12 +515,24 @@ const NewChats = ({ setactiveTab }) => {
           <ModalHeader>Create Group</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
-            <FormControl>
+            <FormControl isRequired>
               <FormLabel>Group Name</FormLabel>
               <Input
                 placeholder="Enter group name"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
+              />
+            </FormControl>
+
+            {/* NEW: Group Description Field */}
+            <FormControl mt={4}>
+              <FormLabel>Group Description (Optional)</FormLabel>
+              <Textarea
+                placeholder="What's this group about?"
+                value={groupDescription}
+                onChange={(e) => setGroupDescription(e.target.value)}
+                rows={3}
+                resize="vertical"
               />
             </FormControl>
 
@@ -621,7 +639,7 @@ const UserList = ({
                   variant="solid"
                   size="sm"
                   isRound
-                  aria-label="Selected"
+                  aria-label="Selected"u
                 />
               )}
             </Flex>
