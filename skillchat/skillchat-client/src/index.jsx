@@ -8,6 +8,9 @@ import { Outlet } from "react-router-dom";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./components/Home";
 import Dashboard from "./components/Dashboard/Dashboard";
+import Settings from "./components/Settings/Settings";
+import Profile from "./components/Profile/Profile";
+import ChatSettings from "./components/Settings/ChatSettings";  // ← ADD THIS
 import ChatState from "./context/appState";
 
 const token = localStorage.getItem("token");
@@ -32,6 +35,18 @@ const router = createBrowserRouter(
         {
           path: "/dashboard",
           element: <Dashboard />,
+        },
+        {
+          path: "/settings",
+          element: <Settings />,
+        },
+        {
+          path: "/profile",
+          element: <Profile />,
+        },
+        {
+          path: "/settings/chats",      // ← ADD THIS
+          element: <ChatSettings />,    // ← ADD THIS
         },
       ],
     },

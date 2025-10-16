@@ -29,7 +29,7 @@ export const ChatInput = ({ onSendMessage, onOpenFileUpload }) => {
   const textColor = useColorModeValue("#3B4A54", "#E9EDEF");
   const placeholderColor = useColorModeValue("#8696A0", "#8696A0");
   const iconColor = useColorModeValue("#8696A0", "#8696A0");
-  const sendBtnBg = "#00A884";
+  const sendBtnBg = "#4f46e5";
   const isDarkMode = useColorModeValue(false, true);
 
 
@@ -243,8 +243,8 @@ export const ChatInput = ({ onSendMessage, onOpenFileUpload }) => {
           aria-label={message.trim() === "" ? "Voice message" : "Send message"}
           bg={sendBtnBg}
           color="white"
-          _hover={{ bg: "#128C7E" }}
-          _active={{ bg: "#075E54" }}
+          _hover={{ bg: "#4338ca" }}
+          _active={{ bg: "#3730a3" }}
           onClick={message.trim() === "" ? undefined : handleSendMessage}
           size="md"
           w="48px"

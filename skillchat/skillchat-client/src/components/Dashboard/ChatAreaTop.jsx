@@ -16,7 +16,7 @@ import {
 import { ArrowBackIcon, InfoIcon } from "@chakra-ui/icons";
 import React, { useContext, useEffect, useCallback } from "react";
 import chatContext from "../../context/chatContext";
-import { ProfileModal } from "../miscellaneous/ProfileModal";
+import { ProfileModal } from "../Profile/ProfileModal";
 import GroupInfoModal from "../miscellaneous/GroupInfoModal";
 
 const ChatAreaTop = () => {
@@ -176,7 +176,7 @@ const ChatAreaTop = () => {
                   {receiver.name}
                 </Text>
                 {receiver.isOnline ? (
-                  <Text fontSize="xs" color="green.500">
+                  <Text fontSize="xs" color="#4f46e5">
                     active now
                   </Text>
                 ) : (

@@ -19,7 +19,7 @@ import {
   FaUsers,
   FaArrowLeft,
 } from "react-icons/fa";
-import ProfileMenu from "./ProfileMenu";
+import ProfileMenu from "../Profile/ProfileMenu";
 import chatContext from "../../context/chatContext";
 import { useNavigate } from "react-router-dom";
 import { Home } from "react-feather";
@@ -50,8 +50,7 @@ const Sidebar = (props) => {
   // 🔵 SPECIAL INDIGO-600 FOR CHAT ICON ONLY
   const chatActiveBg = useColorModeValue("#4f46e5", "#4f46e5"); // INDIGO-600 for both modes
   
-  // 🟢 GREEN FOR OTHER ICONS (WhatsApp style)
-  const otherActiveBg = useColorModeValue("#00a884", "#00a884"); // WhatsApp green
+  const otherActiveBg = useColorModeValue("#4f46e5", "#4f46e5"); // INDIGO-600
   
   const borderColor = useColorModeValue("#e9edef", "#313d45");
 
@@ -210,23 +209,7 @@ const Sidebar = (props) => {
           />
         </Tooltip>
 
-        <Tooltip
-          label={colorMode === "dark" ? "Light Mode" : "Dark Mode"}
-          placement="right"
-          hasArrow
-        >
-          <IconButton
-            aria-label="Toggle Color Mode"
-            icon={colorMode === "dark" ? <FaSun /> : <FaMoon />}
-            onClick={handleToggle}
-            size="lg"
-            variant="ghost"
-            fontSize="xl"
-            _hover={{ bg: hoverBg }}
-            borderRadius="full"
-            color={iconColor}
-          />
-        </Tooltip>
+        
 
         {isAuthenticated && user && (
           <Tooltip label="Your Profile" placement="right" hasArrow>
