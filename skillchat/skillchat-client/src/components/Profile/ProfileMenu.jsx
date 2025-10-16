@@ -306,7 +306,7 @@ const ProfileMenu = (props) => {
       <Flex direction="column" align="center" py={4}>
         <Box position="relative">
           {isUploading ? (
-            <CircularProgress isIndeterminate color="teal.500" size="120px" />
+            <CircularProgress isIndeterminate color="#4f46e5" size="120px" />
           ) : (
             <Avatar
               size="2xl"
@@ -329,11 +329,11 @@ const ProfileMenu = (props) => {
             position="absolute"
             bottom={2}
             right={0}
-            bg={props.colorMode === "dark" ? "gray.700" : "teal.500"}
+            bg={props.colorMode === "dark" ? "gray.700" : "#4f46e5"}
             color="white"
             onClick={() => fileInputRef.current.click()}
             _hover={{
-              bg: props.colorMode === "dark" ? "gray.600" : "teal.600",
+              bg: props.colorMode === "dark" ? "gray.600" : "#4338ca",
             }}
             isDisabled={isUploading}
           />
@@ -381,11 +381,21 @@ const ProfileMenu = (props) => {
 
       {/* Settings Options */}
       <VStack align="stretch" spacing={0}>
-        <MenuItem icon={<FaBell />} label="Notifications" />
-        <Divider />
-        <MenuItem icon={<FaLock />} label="Privacy" />
-        <Divider />
-        <MenuItem icon={<FaQuestionCircle />} label="Help" />
+        <MenuItem
+          icon={<FaBell />}
+          label="Notifications"
+          onClick={() => navigate("/settings")}
+        />
+        <MenuItem
+          icon={<FaLock />}
+          label="Privacy"
+          onClick={() => navigate("/settings")}
+        />
+        <MenuItem
+          icon={<FaQuestionCircle />}
+          label="Help"
+          onClick={() => navigate("/settings")}
+        />
       </VStack>
 
       <Divider />
