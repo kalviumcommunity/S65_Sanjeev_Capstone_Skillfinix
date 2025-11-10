@@ -1,3 +1,4 @@
+const { upsertStreamUser } = require("../lib/stream.js");
 const User = require("../models/User.js");
 const jwt = require("jsonwebtoken");
 
@@ -33,7 +34,19 @@ const signup = async (req, res) => {
       profilePic: randomAvatar,
     });
 
-    // TODO: CREATE THE USER IN STREAM AS WELL
+
+    try {
+      await upsertStreamUser ({
+      id: newUser._id.toString(),
+      name: newUser.fullName,
+      image: newUser.profilePic || "", 
+    });
+
+    console.log(`Stream user cretaed for ${newUser.fullName}`);
+    } catch (error) {
+      console.error("Error creating Stream user:", error);
+    }
+
     const token = jwt.sign(
       { userId: newUser._id },
       process.env.JWT_SECRET_KEY,
@@ -100,4 +113,52 @@ const logout = async (req, res) => {
   res.status(200).json({ success: true, message: "Logged out successfully" });
 };
 
-module.exports = { signup, login, logout };
+const onboard = async (req, res)=>{
+  try {
+    const userId =  req.user._id;
+    const { fullName, bio, location } = req.body;
+
+    if(!fullName || !bio || !location){
+      return res.status(400).json({
+        message:"All fields are required for onboarding",
+        missingFields: [
+          !fullName && "fullName",
+          !bio && "bio",
+          !location && "location"
+        ].filter(Boolean),
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId,{
+      ...req.body,
+      isOnboarded: true
+    }, { new: true }); 
+
+    if (!updatedUser){
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    try {
+      await upsertStreamUser ({
+      id: updatedUser._id.toString(),
+      name: updatedUser.fullName,
+      image: updatedUser.profilePic || "",
+    });
+    
+    console.log(`Stream user updated after onboarding for ${updatedUser.fullName}`);
+      
+    } catch (streamError) {
+      console.error("Error updating Stream user during onboarding:", streamError.message);
+    }
+
+
+    res.status(200).json({ success: true, user: updatedUser });
+
+  } catch (error) {
+    console.error("Error in onboarding controller", error);
+    res.status(500).json({ message: "Internal server error during onboarding" });
+  }
+}
+
+
+module.exports = { signup, login, logout, onboard };
